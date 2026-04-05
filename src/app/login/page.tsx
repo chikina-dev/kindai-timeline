@@ -1,23 +1,9 @@
-import { auth, signIn } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { LoginPageClient } from "./login-page-client";
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const session = await auth();
-
-  if (session) {
-    redirect("/");
-  }
-
-  const { error } = await searchParams;
-
+export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -28,14 +14,7 @@ export default async function LoginPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error === "AccessDenied" && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                近畿大学のアカウント（@kindai.ac.jp）でログインしてください。
-              </AlertDescription>
-            </Alert>
-          )}
+          <LoginPageClient />
           <form
             action={async () => {
               "use server";
