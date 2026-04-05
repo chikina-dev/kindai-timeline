@@ -10,9 +10,13 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { getCourseCountForSlot } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
 import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
+import { useCourseAvailabilityCounts } from "@/hooks/use-timetable";
 import type { Semester } from "@/types/timetable";
+import type { DayOfWeek } from "@/types/timetable";
+import type { CourseAvailabilityCounts } from "@/types/timetable-data";
 
 type SharedCourseFilterContextValue = {
   selectedAcademicYear: number;
@@ -26,6 +30,10 @@ type SharedCourseFilterContextValue = {
   setSelectedGrades: (values: number[]) => void;
   selectedClasses: string[];
   setSelectedClasses: (values: string[]) => void;
+  courseAvailabilityCounts?: CourseAvailabilityCounts;
+  getAvailableCourseCount: (day: DayOfWeek, period: number) => number;
+  ondemandCourseCount: number;
+  isCourseAvailabilityLoading: boolean;
   resetSharedFilters: () => void;
 };
 
@@ -55,10 +63,23 @@ export function CourseFilterProvider({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
   const [selectedClasses, setSelectedClassesState] = useState<string[]>([]);
+  const {
+    data: courseAvailabilityCounts,
+    isLoading: isCourseAvailabilityLoading,
+  } = useCourseAvailabilityCounts({
+    academicYear: selectedAcademicYear,
+    semester: selectedSemester,
+  });
 
   const setSelectedClasses = useCallback((values: string[]) => {
     setSelectedClassesState(normalizeSelectedCourseClasses(values));
   }, []);
+
+  const getAvailableCourseCount = useCallback(
+    (day: DayOfWeek, period: number) =>
+      getCourseCountForSlot(courseAvailabilityCounts, day, period),
+    [courseAvailabilityCounts]
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -93,6 +114,10 @@ export function CourseFilterProvider({
       setSelectedGrades,
       selectedClasses,
       setSelectedClasses,
+      courseAvailabilityCounts,
+      getAvailableCourseCount,
+      ondemandCourseCount: courseAvailabilityCounts?.ondemandCount ?? 0,
+      isCourseAvailabilityLoading,
       resetSharedFilters: () => {
         setSearchTerm("");
         setSelectedGrades([]);
@@ -107,6 +132,9 @@ export function CourseFilterProvider({
       selectedGrades,
       selectedSemester,
       setSelectedClasses,
+      courseAvailabilityCounts,
+      getAvailableCourseCount,
+      isCourseAvailabilityLoading,
     ]
   );
 

@@ -1,12 +1,25 @@
 import useSWR, { mutate as globalMutate } from "swr";
+import {
+  buildCourseAvailabilityApiUrl,
+} from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
+import { buildTimetableApiUrl } from "@/lib/timetable-api";
 import type { Course, Semester } from "@/types/timetable";
+import type {
+  CourseAvailabilityCounts,
+  CourseAvailabilityQueryFilters,
+} from "@/types/timetable-data";
 
 const TIMETABLE_ENDPOINT = "/api/timetable";
 
 const fetcher = async (url: string): Promise<Course[]> => {
   const res = await fetch(url);
   return res.json() as Promise<Course[]>;
+};
+
+const courseAvailabilityFetcher = async (url: string): Promise<CourseAvailabilityCounts> => {
+  const res = await fetch(url);
+  return res.json() as Promise<CourseAvailabilityCounts>;
 };
 
 type SwrHookOptions = {
@@ -54,13 +67,27 @@ export function useCourses(
   return useSWR<Course[]>(key, fetcher);
 }
 
+export function useCourseAvailabilityCounts(
+  filters?: CourseAvailabilityQueryFilters,
+  options?: SwrHookOptions
+) {
+  const url = buildCourseAvailabilityApiUrl("/api/courses/counts", filters);
+  const key = options?.enabled === false ? null : url;
+
+  return useSWR<CourseAvailabilityCounts>(key, courseAvailabilityFetcher, {
+    revalidateIfStale: false,
+  });
+}
+
 export function useUserTimetable(
   filters?: Pick<CourseQueryFilters, "semester" | "academicYear">,
   options?: SwrHookOptions
 ) {
-  const url = buildCoursesUrl(TIMETABLE_ENDPOINT, filters);
+  const url = buildTimetableApiUrl(TIMETABLE_ENDPOINT, filters);
   const key = options?.enabled === false ? null : url;
-  const { data, error, isLoading, mutate } = useSWR<Course[]>(key, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<Course[]>(key, fetcher, {
+    revalidateIfStale: false,
+  });
 
   const courseMatchesKey = (course: Course, key: string) => {
     const parsed = new URL(key, "http://localhost");

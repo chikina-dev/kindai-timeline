@@ -58,20 +58,22 @@ export function OndemandCourseDialog({
     setSelectedGrades,
     selectedClasses,
     setSelectedClasses,
+    ondemandCourseCount,
     resetSharedFilters,
   } = useSharedCourseFilters();
+  const hasOndemandCourses = ondemandCourseCount > 0;
   const { data: courses, isLoading } = useCourses({
     ondemand: true,
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   }, {
-    enabled: open,
+    enabled: open && hasOndemandCourses,
   });
   const { addCourse, timetable } = useUserTimetable({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   }, {
-    enabled: open,
+    enabled: open && hasOndemandCourses,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -142,13 +144,17 @@ export function OndemandCourseDialog({
                 </Select>
               </div>
               <span className="text-xs text-muted-foreground">
-                {courseGroups.length}件
+                {hasOndemandCourses ? `${courseGroups.length}件` : "0件"}
               </span>
             </div>
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Spinner className="w-6 h-6" />
+              </div>
+            ) : !hasOndemandCourses ? (
+              <div className="py-12 text-center text-muted-foreground">
+                この条件のオンデマンド・集中講義はありません
               </div>
             ) : filteredCourses.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">

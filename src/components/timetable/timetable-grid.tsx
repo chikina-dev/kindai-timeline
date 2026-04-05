@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 
 export function TimetableGrid() {
-  const { selectedAcademicYear, selectedSemester } = useSharedCourseFilters();
+  const {
+    selectedAcademicYear,
+    selectedSemester,
+    getAvailableCourseCount,
+  } = useSharedCourseFilters();
   const { getCourseByPosition, isLoading } = useUserTimetable({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
@@ -72,6 +76,7 @@ export function TimetableGrid() {
                     day={day as DayOfWeek}
                     period={period}
                     course={course}
+                    availableCourseCount={getAvailableCourseCount(day as DayOfWeek, period)}
                   />
                 );
               })}

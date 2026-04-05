@@ -11,6 +11,7 @@ type TimetableCellProps = {
   day: DayOfWeek;
   period: number;
   course?: Course;
+  availableCourseCount: number;
 };
 
 const categoryColors: Record<string, string> = {
@@ -35,7 +36,7 @@ function getFeatureLabel(feature: Course["features"] | undefined) {
   return "専門OD";
 }
 
-export function TimetableCell({ day, period, course }: TimetableCellProps) {
+export function TimetableCell({ day, period, course, availableCourseCount }: TimetableCellProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const slotDetail = [course?.className, course?.classroom].filter(Boolean).join(" / ");
   const featureLabel = getFeatureLabel(course?.features);
@@ -56,6 +57,7 @@ export function TimetableCell({ day, period, course }: TimetableCellProps) {
           onOpenChange={setIsDialogOpen}
           day={day}
           period={period}
+          availableCourseCount={availableCourseCount}
         />
       </>
     );
@@ -109,6 +111,7 @@ export function TimetableCell({ day, period, course }: TimetableCellProps) {
         day={day}
         period={period}
         selectedCourse={course}
+        availableCourseCount={availableCourseCount}
       />
     </>
   );

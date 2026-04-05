@@ -9,10 +9,84 @@ import {
 } from "@/lib/academic-term";
 import { desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { TimetableHeader } from "@/components/timetable/timetable-header";
-import { TimetableGrid } from "@/components/timetable/timetable-grid";
-import { TimetableSidebar } from "@/components/timetable/timetable-sidebar";
-import { CourseFilterProvider } from "@/components/timetable/course-filter-provider";
+import { TimetablePage } from "@/components/timetable/timetable-page";
+import { TimeTableProvider } from "@/components/timetable/timetable-provider";
+import { buildCourseAvailabilityApiUrl } from "@/lib/course-availability";
+import { buildTimetableApiUrl } from "@/lib/timetable-api";
+import { getCourseAvailabilityCounts } from "@/server/course-availability";
+import { getUserTimetable } from "@/server/timetable";
+import type { Course, Semester } from "@/types/timetable";
+import type {
+  CourseAvailabilityCounts,
+  TimetableSwrFallback,
+} from "@/types/timetable-data";
+
+const DATABASE_UNAVAILABLE_WARNING =
+  "データベースに接続できないため、最新の時間割データを取得できませんでした。しばらくしてから再読み込みしてください。";
+
+const EMPTY_COURSE_AVAILABILITY_COUNTS: CourseAvailabilityCounts = {
+  slotCounts: {},
+  ondemandCount: 0,
+};
+
+async function loadAvailableAcademicYears(fallbackAcademicYear: number) {
+  try {
+    const academicYearRows = await db
+      .select({ academicYear: courses.academicYear })
+      .from(courses)
+      .orderBy(desc(courses.academicYear));
+
+    const availableAcademicYears = Array.from(
+      new Set(academicYearRows.map((row) => row.academicYear))
+    );
+
+    return {
+      availableAcademicYears:
+        availableAcademicYears.length > 0
+          ? availableAcademicYears
+          : [fallbackAcademicYear],
+    };
+  } catch (error) {
+    console.error("Failed to load available academic years:", error);
+
+    return {
+      availableAcademicYears: [fallbackAcademicYear],
+      warningMessage: DATABASE_UNAVAILABLE_WARNING,
+    };
+  }
+}
+
+async function loadInitialTimetableData(
+  userId: string,
+  academicYear: number,
+  semester: Semester
+) {
+  try {
+    const [initialTimetable, initialCourseAvailabilityCounts] = await Promise.all([
+      getUserTimetable(userId, {
+        academicYear,
+        semester,
+      }),
+      getCourseAvailabilityCounts({
+        academicYear,
+        semester,
+      }),
+    ]);
+
+    return {
+      initialTimetable,
+      initialCourseAvailabilityCounts,
+    };
+  } catch (error) {
+    console.error("Failed to load initial timetable data:", error);
+
+    return {
+      initialTimetable: [] as Course[],
+      initialCourseAvailabilityCounts: EMPTY_COURSE_AVAILABILITY_COUNTS,
+      warningMessage: DATABASE_UNAVAILABLE_WARNING,
+    };
+  }
+}
 
 export default async function HomePage({
   searchParams,
@@ -25,67 +99,51 @@ export default async function HomePage({
     redirect("/login");
   }
 
-  const [{ academicYear, semester }, academicYearRows] = await Promise.all([
-    searchParams,
-    db
-      .select({ academicYear: courses.academicYear })
-      .from(courses)
-      .orderBy(desc(courses.academicYear)),
-  ]);
+  const { academicYear, semester } = await searchParams;
 
   const inferredAcademicYear = inferAcademicYear(new Date());
-  const availableAcademicYears = Array.from(
-    new Set(academicYearRows.map((row) => row.academicYear))
-  );
-  const normalizedAcademicYears =
-    availableAcademicYears.length > 0
-      ? availableAcademicYears
-      : [inferredAcademicYear];
+  const {
+    availableAcademicYears: normalizedAcademicYears,
+    warningMessage: academicYearsWarningMessage,
+  } = await loadAvailableAcademicYears(inferredAcademicYear);
   const initialAcademicYear = resolveAcademicYear(
     academicYear,
     normalizedAcademicYears,
     normalizedAcademicYears[0]
   );
   const initialSemester = resolveSemester(semester, inferSemester(new Date()));
+  const {
+    initialTimetable,
+    initialCourseAvailabilityCounts,
+    warningMessage: initialDataWarningMessage,
+  } = await loadInitialTimetableData(
+    session.user.id,
+    initialAcademicYear,
+    initialSemester
+  );
+  const warningMessage =
+    academicYearsWarningMessage ?? initialDataWarningMessage;
+
+  const swrFallback: TimetableSwrFallback = {
+    [buildTimetableApiUrl("/api/timetable", {
+      academicYear: initialAcademicYear,
+      semester: initialSemester,
+    })]: initialTimetable,
+    [buildCourseAvailabilityApiUrl("/api/courses/counts", {
+      academicYear: initialAcademicYear,
+      semester: initialSemester,
+    })]: initialCourseAvailabilityCounts,
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <CourseFilterProvider
-        initialAcademicYear={initialAcademicYear}
-        availableAcademicYears={normalizedAcademicYears}
-        initialSemester={initialSemester}
-      >
-        <TimetableHeader session={session} />
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
-            <div className="min-w-0 bg-card rounded-xl border border-border overflow-hidden">
-              <TimetableGrid />
-            </div>
-            <aside className="min-w-0 w-[min(100%,320px)] justify-self-start space-y-4 xl:sticky xl:top-24 xl:self-start">
-              <TimetableSidebar />
-            </aside>
-          </div>
-        </main>
-      </CourseFilterProvider>
-      <footer className="border-t border-border py-4 mt-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="space-y-1 text-center text-sm text-muted-foreground">
-            <p>
-              非公式かつPDFを簡易的にパースしただけなので精度が不十分である場合があります。公式の時間割を参照してください。(改訂版対応済み)
-            </p>
-            <p>
-              <a
-                href="https://x.com/chikina_dev"
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-4 hover:text-foreground"
-              >
-                @chikina_dev
-              </a>
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
+    <TimeTableProvider
+      fallback={swrFallback}
+      initialAcademicYear={initialAcademicYear}
+      availableAcademicYears={normalizedAcademicYears}
+      initialSemester={initialSemester}
+      warningMessage={warningMessage}
+    >
+      <TimetablePage session={session} />
+    </TimeTableProvider>
   );
 }

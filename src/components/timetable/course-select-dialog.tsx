@@ -38,6 +38,7 @@ type CourseSelectDialogProps = {
   onOpenChange: (open: boolean) => void;
   day: DayOfWeek;
   period: number;
+  availableCourseCount: number;
   selectedCourse?: Course;
 };
 
@@ -52,6 +53,7 @@ export function CourseSelectDialog({
   onOpenChange,
   day,
   period,
+  availableCourseCount,
   selectedCourse,
 }: CourseSelectDialogProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -67,19 +69,20 @@ export function CourseSelectDialog({
     setSelectedClasses,
     resetSharedFilters,
   } = useSharedCourseFilters();
+  const hasAvailableCourses = availableCourseCount > 0;
   const { data: courses, isLoading } = useCourses({
     day,
     period,
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   }, {
-    enabled: open,
+    enabled: open && hasAvailableCourses,
   });
   const { addCourse, removeCourse, timetable } = useUserTimetable({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   }, {
-    enabled: open,
+    enabled: open && (hasAvailableCourses || Boolean(selectedCourse)),
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -212,13 +215,17 @@ export function CourseSelectDialog({
                 </Select>
               </div>
               <span className="text-xs text-muted-foreground">
-                {courseGroups.length}件
+                {hasAvailableCourses ? `${courseGroups.length}件` : "0件"}
               </span>
             </div>
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Spinner className="w-6 h-6" />
+              </div>
+            ) : !hasAvailableCourses ? (
+              <div className="py-12 text-center text-muted-foreground">
+                この曜日・時限に開講されている科目はありません
               </div>
             ) : filteredCourses.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { fromSemesterQueryValue } from "@/lib/academic-term";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { courses, userCourses } from "@/lib/db/schema";
+import { userCourses } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { getUserTimetable } from "@/server/timetable";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -15,43 +16,11 @@ export async function GET(request: Request) {
   const semester = fromSemesterQueryValue(searchParams.get("semester"));
   const academicYear = searchParams.get("academicYear");
 
-  const conditions = [eq(userCourses.userId, session.user.id)];
-
-  if (semester) {
-    conditions.push(eq(courses.semester, semester));
-  }
-
-  if (academicYear) {
-    conditions.push(eq(courses.academicYear, parseInt(academicYear, 10)));
-  }
-
   try {
-    const result = await db
-      .select({
-        id: courses.id,
-        syllabusId: courses.syllabusId,
-        requirementType: courses.requirementType,
-        name: courses.name,
-        day: courses.day,
-        periods: courses.periods,
-        category: courses.category,
-        grades: courses.grades,
-        className: courses.className,
-        classroom: courses.classroom,
-        credits: courses.credits,
-        instructors: courses.instructors,
-        note: courses.note,
-        features: courses.features,
-        academicYear: courses.academicYear,
-        semester: courses.semester,
-        department: courses.department,
-        createdAt: courses.createdAt,
-        userCourseId: userCourses.id,
-      })
-      .from(userCourses)
-      .innerJoin(courses, eq(userCourses.courseId, courses.id))
-      .where(and(...conditions))
-      .orderBy(courses.day, courses.name);
+    const result = await getUserTimetable(session.user.id, {
+      semester: semester ?? undefined,
+      academicYear: academicYear ? parseInt(academicYear, 10) : undefined,
+    });
 
     return NextResponse.json(result);
   } catch (error) {
