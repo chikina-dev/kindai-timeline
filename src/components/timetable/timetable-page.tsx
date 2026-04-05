@@ -26,7 +26,7 @@ export function TimetablePage({
       <TimetableHeader session={session} />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <TimetableWarning />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,21rem)] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_23rem]">
           <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
             <TimetableGrid
               initialAcademicYear={initialAcademicYear}
@@ -35,8 +35,12 @@ export function TimetablePage({
               initialCourseAvailabilityCounts={initialCourseAvailabilityCounts}
             />
           </div>
-          <aside className="min-w-0 w-[min(100%,320px)] justify-self-start space-y-4 xl:sticky xl:top-24 xl:self-start">
-            <TimetableSidebar />
+          <aside className="min-w-0 w-full max-w-none justify-self-stretch space-y-4 xl:sticky xl:top-24 xl:self-start xl:max-w-[21rem] 2xl:max-w-[23rem]">
+            <TimetableSidebar
+              initialAcademicYear={initialAcademicYear}
+              initialSemester={initialSemester}
+              initialTimetable={initialTimetable}
+            />
           </aside>
         </div>
       </main>
