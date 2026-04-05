@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { TimetablePage } from "@/components/timetable/timetable-page";
 import { TimeTableProvider } from "@/components/timetable/timetable-provider";
@@ -10,6 +11,8 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ academicYear?: string; semester?: string }>;
 }) {
+  await connection();
+
   const session = await auth();
 
   if (!session) {
