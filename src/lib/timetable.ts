@@ -48,6 +48,32 @@ export function findCourseByPosition(
   );
 }
 
+export function sortTimetableCourses(timetable: Course[]) {
+  return [...timetable].sort((left, right) => {
+    const leftDay = left.day ? getDayNumber(left.day) : Number.POSITIVE_INFINITY;
+    const rightDay = right.day ? getDayNumber(right.day) : Number.POSITIVE_INFINITY;
+
+    if (leftDay !== rightDay) {
+      return leftDay - rightDay;
+    }
+
+    const leftFirstPeriod = Math.min(...(left.periods ?? [Number.POSITIVE_INFINITY]));
+    const rightFirstPeriod = Math.min(...(right.periods ?? [Number.POSITIVE_INFINITY]));
+
+    if (leftFirstPeriod !== rightFirstPeriod) {
+      return leftFirstPeriod - rightFirstPeriod;
+    }
+
+    const nameComparison = left.name.localeCompare(right.name, "ja");
+
+    if (nameComparison !== 0) {
+      return nameComparison;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+}
+
 export function isInitialTimetableSelection(
   selectedAcademicYear: number,
   selectedSemester: Semester,
