@@ -87,7 +87,7 @@ export function CourseSelectDialog({
   });
   const courseGroups = groupCoursesByName(filteredCourses);
   const gradeOptions = getCourseGradeOptions(courses);
-  const classOptions = getCourseClassOptions();
+  const classOptions = getCourseClassOptions(selectedClasses);
 
   const isInTimetable = (courseId: string) => {
     return timetable.some((c) => c.id === courseId);

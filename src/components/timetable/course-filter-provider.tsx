@@ -3,6 +3,7 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useEffect,
   useContext,
   useMemo,
@@ -10,6 +11,7 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toSemesterQueryValue } from "@/lib/academic-term";
+import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
 import type { Semester } from "@/types/timetable";
 
 type SharedCourseFilterContextValue = {
@@ -52,7 +54,11 @@ export function CourseFilterProvider({
     useState<Semester>(initialSemester);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
-  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [selectedClasses, setSelectedClassesState] = useState<string[]>([]);
+
+  const setSelectedClasses = useCallback((values: string[]) => {
+    setSelectedClassesState(normalizeSelectedCourseClasses(values));
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -90,7 +96,7 @@ export function CourseFilterProvider({
       resetSharedFilters: () => {
         setSearchTerm("");
         setSelectedGrades([]);
-        setSelectedClasses([]);
+        setSelectedClassesState([]);
       },
     }),
     [
@@ -100,6 +106,7 @@ export function CourseFilterProvider({
       selectedClasses,
       selectedGrades,
       selectedSemester,
+      setSelectedClasses,
     ]
   );
 

@@ -28,14 +28,81 @@ export const COURSE_CLASS_FILTER_OPTIONS = [
   "知能",
 ] as const;
 
+type CourseClassFilterOption = (typeof COURSE_CLASS_FILTER_OPTIONS)[number];
+
+const EXCLUSIVE_COURSE_CLASS_FILTER_GROUPS: readonly CourseClassFilterOption[][] = [
+  ["A", "B", "C"],
+  ["実世界", "サイバー", "知能"],
+];
+
+function isCourseClassFilterOption(value: string): value is CourseClassFilterOption {
+  return COURSE_CLASS_FILTER_OPTIONS.some((option) => option === value);
+}
+
+function getExclusiveCourseClassGroup(selectedClass: string) {
+  if (!isCourseClassFilterOption(selectedClass)) {
+    return null;
+  }
+
+  return (
+    EXCLUSIVE_COURSE_CLASS_FILTER_GROUPS.find((group) =>
+      group.includes(selectedClass)
+    ) ?? null
+  );
+}
+
+export function normalizeSelectedCourseClasses(selectedClasses: string[]) {
+  const normalizedSelectedClasses: string[] = [];
+
+  for (const selectedClass of selectedClasses) {
+    if (normalizedSelectedClasses.includes(selectedClass)) {
+      continue;
+    }
+
+    const exclusiveGroup = getExclusiveCourseClassGroup(selectedClass);
+
+    if (
+      exclusiveGroup &&
+      normalizedSelectedClasses.some((currentSelectedClass) =>
+        exclusiveGroup.includes(currentSelectedClass as CourseClassFilterOption)
+      )
+    ) {
+      continue;
+    }
+
+    normalizedSelectedClasses.push(selectedClass);
+  }
+
+  return normalizedSelectedClasses;
+}
+
 export function getCourseGradeOptions(courses: Course[] | undefined) {
   return Array.from(
     new Set(courses?.flatMap((course) => course.grades ?? []) ?? [])
   ).sort((left, right) => left - right);
 }
 
-export function getCourseClassOptions() {
-  return [...COURSE_CLASS_FILTER_OPTIONS];
+export function getCourseClassOptions(selectedClasses: string[] = []) {
+  const normalizedSelectedClasses = normalizeSelectedCourseClasses(selectedClasses);
+  const hiddenOptions = new Set<CourseClassFilterOption>();
+
+  for (const group of EXCLUSIVE_COURSE_CLASS_FILTER_GROUPS) {
+    const selectedOption = group.find((option) =>
+      normalizedSelectedClasses.includes(option)
+    );
+
+    if (!selectedOption) {
+      continue;
+    }
+
+    for (const option of group) {
+      if (option !== selectedOption) {
+        hiddenOptions.add(option);
+      }
+    }
+  }
+
+  return COURSE_CLASS_FILTER_OPTIONS.filter((option) => !hiddenOptions.has(option));
 }
 
 function matchesSelectedClassFilter(className: string | null, selectedClass: string) {
@@ -44,6 +111,10 @@ function matchesSelectedClassFilter(className: string | null, selectedClass: str
   }
 
   return className.includes(selectedClass);
+}
+
+function isRetakeCourse(className: string | null) {
+  return matchesSelectedClassFilter(className, "再履修");
 }
 
 export function filterCourses(
@@ -55,6 +126,9 @@ export function filterCourses(
   }
 
   const normalizedSearchTerm = filters.searchTerm.trim().toLocaleLowerCase();
+  const normalizedSelectedClasses = normalizeSelectedCourseClasses(
+    filters.selectedClasses
+  );
 
   return courses.filter((course) => {
     if (filters.category !== "all" && course.category !== filters.category) {
@@ -70,14 +144,19 @@ export function filterCourses(
 
     if (
       filters.selectedGrades.length > 0 &&
+      !isRetakeCourse(course.className) &&
       !course.grades?.some((grade) => filters.selectedGrades.includes(grade))
     ) {
       return false;
     }
 
-    if (filters.selectedClasses.length > 0) {
+    if (normalizedSelectedClasses.length > 0) {
       if (
-        !filters.selectedClasses.some((selectedClass) =>
+        !(
+          isRetakeCourse(course.className) &&
+          !normalizedSelectedClasses.includes("再履修")
+        ) &&
+        !normalizedSelectedClasses.some((selectedClass) =>
           matchesSelectedClassFilter(course.className, selectedClass)
         )
       ) {
