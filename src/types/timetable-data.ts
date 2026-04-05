@@ -20,3 +20,11 @@ export type CourseAvailabilityCounts = {
 export type TimetableSwrFallbackValue = Course[] | CourseAvailabilityCounts;
 
 export type TimetableSwrFallback = Record<string, TimetableSwrFallbackValue>;
+
+export type TimetablePageInitialData = {
+  initialAcademicYear: number;
+  availableAcademicYears: number[];
+  initialSemester: Semester;
+  warningMessage?: string;
+  swrFallback: TimetableSwrFallback;
+};
