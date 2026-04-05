@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { useTheme } from "next-themes";
 import type { Session } from "next-auth";
 import { Monitor, LogOut, Moon, Settings2, Sun } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 import { UserCoursePreferencesDialog } from "@/components/timetable/user-course-preferences-dialog";
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +32,12 @@ export function ProfileMenu({ session, buttonClassName }: ProfileMenuProps) {
   const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
   const { resolvedUserCourseProfile } = useSharedCourseFilters();
   const profileSummary = formatResolvedUserCourseProfile(resolvedUserCourseProfile);
+
+  const handleThemeChange = (value: string) => {
+    if (value === "light" || value === "dark" || value === "system") {
+      setTheme(value);
+    }
+  };
 
   return (
     <>
@@ -71,7 +77,7 @@ export function ProfileMenu({ session, buttonClassName }: ProfileMenuProps) {
           <DropdownMenuLabel className="px-2 py-1 text-xs font-medium text-muted-foreground">
             表示テーマ
           </DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={theme ?? "dark"} onValueChange={setTheme}>
+          <DropdownMenuRadioGroup value={theme ?? "dark"} onValueChange={handleThemeChange}>
             <DropdownMenuRadioItem value="light">
               <Sun className="mr-2 h-4 w-4" />
               ライト
