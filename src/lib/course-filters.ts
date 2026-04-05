@@ -117,6 +117,17 @@ function isRetakeCourse(className: string | null) {
   return matchesSelectedClassFilter(className, "再履修");
 }
 
+function isSharedCourseForSelectedClasses(
+  className: string | null,
+  selectedClasses: string[]
+) {
+  if (className && className.trim().length > 0) {
+    return false;
+  }
+
+  return selectedClasses.some((selectedClass) => selectedClass !== "再履修");
+}
+
 export function filterCourses(
   courses: Course[] | undefined,
   filters: CourseFilterState
@@ -151,6 +162,15 @@ export function filterCourses(
     }
 
     if (normalizedSelectedClasses.length > 0) {
+      if (
+        isSharedCourseForSelectedClasses(
+          course.className,
+          normalizedSelectedClasses
+        )
+      ) {
+        return true;
+      }
+
       if (
         !(
           isRetakeCourse(course.className) &&
