@@ -6,6 +6,7 @@ import { useSharedCourseFilters } from "@/components/timetable/course-filter-pro
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -130,6 +131,9 @@ export function CourseSelectDialog({
               <Badge variant="outline">科目を選択</Badge>
             )}
           </DialogTitle>
+          <DialogDescription>
+            {day}曜 {period}限に配置する科目を検索して選択します。
+          </DialogDescription>
         </DialogHeader>
 
         {selectedCourse && (

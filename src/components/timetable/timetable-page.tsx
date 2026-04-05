@@ -31,7 +31,7 @@ export function TimetablePage({
             <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
               <TimetableGrid />
             </div>
-            <aside className="min-w-0 space-y-4 xl:sticky xl:top-24 xl:self-start">
+            <aside className="min-w-0 w-[min(100%,320px)] justify-self-start space-y-4 xl:sticky xl:top-24 xl:self-start">
               <TimetableSidebar />
             </aside>
           </div>

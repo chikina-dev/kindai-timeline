@@ -6,7 +6,6 @@ import { useUserTimetable } from "@/hooks/use-timetable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Trash2, BookOpen, User, MapPin, Plus, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,7 +70,7 @@ export function TimetableSidebar() {
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-80 sm:h-100">
+          <div className="h-80 overflow-y-auto overflow-x-hidden sm:h-100">
             <div className="space-y-2 px-3 pb-3 pt-0 sm:p-4 sm:pt-0">
               {sortedTimetable.map((course) => (
                 <div
@@ -85,13 +84,13 @@ export function TimetableSidebar() {
                         categoryColors[course.category]
                       )}
                     />
-                      <div className="relative min-w-0 flex-1 pr-8">
-                        <CourseSyllabusLink
-                          syllabusId={course.syllabusId}
-                          iconOnly
-                          className="absolute right-0 top-0 z-10 h-7 w-7"
-                        />
-                        <div className="mb-1 flex flex-wrap items-center gap-2 pr-1">
+                    <div className="relative min-w-0 flex-1 pr-8">
+                      <CourseSyllabusLink
+                        syllabusId={course.syllabusId}
+                        iconOnly
+                        className="absolute right-0 top-0 z-10 h-7 w-7"
+                      />
+                      <div className="mb-1 flex flex-wrap items-center gap-2 pr-1">
                         <Badge variant="secondary" className="text-[10px] sm:text-xs">
                           {course.day ? `${course.day}${course.periods?.[0]}限` : "集中"}
                         </Badge>
@@ -100,9 +99,9 @@ export function TimetableSidebar() {
                         </span>
                         <CourseRequirementBadge requirementType={course.requirementType} />
                       </div>
-                        <h4 className="min-w-0 line-clamp-2 text-xs font-medium text-foreground sm:text-sm">
-                          {course.name}
-                        </h4>
+                      <h4 className="min-w-0 line-clamp-2 text-xs font-medium text-foreground sm:text-sm">
+                        {course.name}
+                      </h4>
                       {course.instructors && (
                         <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground sm:text-xs">
                           <User className="h-3 w-3" />
@@ -139,7 +138,7 @@ export function TimetableSidebar() {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </CardContent>
       <div className="shrink-0 space-y-2 border-t border-border px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4">

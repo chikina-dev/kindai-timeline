@@ -6,6 +6,7 @@ import { useSharedCourseFilters } from "@/components/timetable/course-filter-pro
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -100,6 +101,9 @@ export function OndemandCourseDialog({
           <DialogTitle>
             オンデマンド・集中講義 ({selectedAcademicYear}年度 {selectedSemester})
           </DialogTitle>
+          <DialogDescription>
+            オンデマンド・集中講義を検索して時間割に追加します。
+          </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">

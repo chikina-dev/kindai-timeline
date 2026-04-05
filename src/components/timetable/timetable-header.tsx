@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
 import { ProfileMenu } from "@/components/timetable/profile-menu";
 import { useUserTimetable } from "@/hooks/use-timetable";
@@ -20,6 +21,7 @@ type TimetableHeaderProps = {
 };
 
 export function TimetableHeader({ session }: TimetableHeaderProps) {
+  const [hasMounted, setHasMounted] = useState(false);
   const {
     selectedAcademicYear,
     setSelectedAcademicYear,
@@ -31,6 +33,10 @@ export function TimetableHeader({ session }: TimetableHeaderProps) {
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   });
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const categoryCounts = timetable.reduce(
     (acc, course) => {
@@ -56,42 +62,60 @@ export function TimetableHeader({ session }: TimetableHeaderProps) {
             </div>
           </div>
 
-          <ProfileMenu session={session} buttonClassName="lg:hidden" />
+          {hasMounted ? (
+            <ProfileMenu session={session} buttonClassName="lg:hidden" />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="h-10 w-10 shrink-0 rounded-full border border-border/60 bg-background/60 lg:hidden"
+            />
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-          <div className="flex items-center gap-2">
-            <Select
-              value={String(selectedAcademicYear)}
-              onValueChange={(value) => setSelectedAcademicYear(Number(value))}
-            >
-              <SelectTrigger className="w-28">
-                <SelectValue placeholder="年度" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableAcademicYears.map((academicYear) => (
-                  <SelectItem key={academicYear} value={String(academicYear)}>
-                    {academicYear}年度
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={selectedSemester}
-              onValueChange={(value) => setSelectedSemester(value as (typeof SEMESTERS)[number])}
-            >
-              <SelectTrigger className="w-24">
-                <SelectValue placeholder="学期" />
-              </SelectTrigger>
-              <SelectContent>
-                {SEMESTERS.map((semester) => (
-                  <SelectItem key={semester} value={semester}>
-                    {semester}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {hasMounted ? (
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(selectedAcademicYear)}
+                onValueChange={(value) => setSelectedAcademicYear(Number(value))}
+              >
+                <SelectTrigger className="w-28">
+                  <SelectValue placeholder="年度" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAcademicYears.map((academicYear) => (
+                    <SelectItem key={academicYear} value={String(academicYear)}>
+                      {academicYear}年度
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedSemester}
+                onValueChange={(value) => setSelectedSemester(value as (typeof SEMESTERS)[number])}
+              >
+                <SelectTrigger className="w-24">
+                  <SelectValue placeholder="学期" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEMESTERS.map((semester) => (
+                    <SelectItem key={semester} value={semester}>
+                      {semester}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="h-9 min-w-28 justify-center font-normal">
+                {selectedAcademicYear}年度
+              </Badge>
+              <Badge variant="outline" className="h-9 min-w-24 justify-center font-normal">
+                {selectedSemester}
+              </Badge>
+            </div>
+          )}
 
           <div className="hidden md:flex items-center gap-2">
             <Badge
@@ -126,7 +150,14 @@ export function TimetableHeader({ session }: TimetableHeaderProps) {
             </Badge>
           </div>
 
-          <ProfileMenu session={session} buttonClassName="hidden lg:flex" />
+          {hasMounted ? (
+            <ProfileMenu session={session} buttonClassName="hidden lg:flex" />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="hidden h-10 w-10 shrink-0 rounded-full border border-border/60 bg-background/60 lg:block"
+            />
+          )}
         </div>
       </div>
     </header>
