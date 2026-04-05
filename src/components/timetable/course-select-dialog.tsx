@@ -72,10 +72,14 @@ export function CourseSelectDialog({
     period,
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
+  }, {
+    enabled: open,
   });
   const { addCourse, removeCourse, timetable } = useUserTimetable({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
+  }, {
+    enabled: open,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 

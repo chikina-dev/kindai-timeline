@@ -9,6 +9,10 @@ const fetcher = async (url: string): Promise<Course[]> => {
   return res.json() as Promise<Course[]>;
 };
 
+type SwrHookOptions = {
+  enabled?: boolean;
+};
+
 type CourseQueryFilters = {
   day?: string;
   period?: number;
@@ -40,15 +44,23 @@ function buildCoursesUrl(basePath: string, filters?: CourseQueryFilters) {
   return `${basePath}${queryString ? `?${queryString}` : ""}`;
 }
 
-export function useCourses(filters?: CourseQueryFilters) {
+export function useCourses(
+  filters?: CourseQueryFilters,
+  options?: SwrHookOptions
+) {
   const url = buildCoursesUrl("/api/courses", filters);
+  const key = options?.enabled === false ? null : url;
 
-  return useSWR<Course[]>(url, fetcher);
+  return useSWR<Course[]>(key, fetcher);
 }
 
-export function useUserTimetable(filters?: Pick<CourseQueryFilters, "semester" | "academicYear">) {
+export function useUserTimetable(
+  filters?: Pick<CourseQueryFilters, "semester" | "academicYear">,
+  options?: SwrHookOptions
+) {
   const url = buildCoursesUrl(TIMETABLE_ENDPOINT, filters);
-  const { data, error, isLoading, mutate } = useSWR<Course[]>(url, fetcher);
+  const key = options?.enabled === false ? null : url;
+  const { data, error, isLoading, mutate } = useSWR<Course[]>(key, fetcher);
 
   const courseMatchesKey = (course: Course, key: string) => {
     const parsed = new URL(key, "http://localhost");

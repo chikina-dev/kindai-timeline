@@ -64,10 +64,14 @@ export function OndemandCourseDialog({
     ondemand: true,
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
+  }, {
+    enabled: open,
   });
   const { addCourse, timetable } = useUserTimetable({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
+  }, {
+    enabled: open,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
