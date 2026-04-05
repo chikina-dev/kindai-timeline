@@ -50,3 +50,14 @@ next-env.d.ts
 
 
 !.dev.vars.example
+
+
+.agents/
+.claude/
+.vscode/
+
+
+# 時間割案とかを保存している
+data/
+
+kindai-timetable-*.json

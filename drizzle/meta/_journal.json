@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775148239481,
+      "tag": "0000_ordinary_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775197519623,
+      "tag": "0001_numerous_korath",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775363179859,
+      "tag": "0002_add_requirement_type",
+      "breakpoints": true
+    }
+  ]
+}
