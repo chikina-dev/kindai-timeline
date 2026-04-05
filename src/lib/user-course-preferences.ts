@@ -91,12 +91,6 @@ export function sanitizeUserCoursePreferences(
   } satisfies UserCoursePreferences;
 }
 
-export function getUserCoursePreferencesStorageKey(studentEmail?: string | null) {
-  return `kindai-timetable:user-course-preferences:${
-    studentEmail?.toLowerCase() || "anonymous"
-  }`;
-}
-
 export function parseKindaiStudentEmail(studentEmail: string) {
   const normalizedEmail = studentEmail.trim().toLowerCase();
   const localPart = normalizedEmail.split("@")[0] ?? "";

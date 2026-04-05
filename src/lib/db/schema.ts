@@ -121,6 +121,20 @@ export const userCourses = pgTable(
   })
 );
 
+export const userCoursePreferences = pgTable("user_course_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  studentEmail: text("student_email").notNull(),
+  gradeMode: text("grade_mode").notNull().default("auto"),
+  manualGrade: integer("manual_grade"),
+  classMode: text("class_mode").notNull().default("auto"),
+  manualClass: text("manual_class"),
+  selectedCourse: text("selected_course"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
 // ============================================================
 // Inferred types
 // ============================================================
@@ -128,3 +142,4 @@ export const userCourses = pgTable(
 export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
 export type UserCourse = typeof userCourses.$inferSelect;
+export type UserCoursePreferencesRecord = typeof userCoursePreferences.$inferSelect;

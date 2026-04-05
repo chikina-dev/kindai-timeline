@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { TimetablePage } from "@/components/timetable/timetable-page";
 import { TimeTableProvider } from "@/components/timetable/timetable-provider";
 import { getTimeTablePageInitialData } from "@/server/timetable-page-data";
+import { getUserCoursePreferences } from "@/server/user-course-preferences";
 
 export default async function HomePage({
   searchParams,
@@ -29,6 +30,10 @@ export default async function HomePage({
     requestedAcademicYear: academicYear,
     requestedSemester: semester,
   });
+  const initialUserCoursePreferences = await getUserCoursePreferences(
+    session.user.id,
+    session.user.email ?? null
+  );
 
   return (
     <TimeTableProvider
@@ -37,7 +42,7 @@ export default async function HomePage({
       availableAcademicYears={availableAcademicYears}
       initialSemester={initialSemester}
       warningMessage={warningMessage}
-      sessionEmail={session.user.email ?? null}
+      initialUserCoursePreferences={initialUserCoursePreferences}
     >
       <TimetablePage
         session={session}

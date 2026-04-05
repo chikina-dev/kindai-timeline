@@ -49,6 +49,7 @@ export function UserCoursePreferencesDialog({
   const [draftPreferences, setDraftPreferences] = useState<UserCoursePreferences>(
     userCoursePreferences
   );
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -63,13 +64,25 @@ export function UserCoursePreferencesDialog({
     [draftPreferences, selectedAcademicYear]
   );
 
-  const handleSave = () => {
-    saveUserCoursePreferences(draftPreferences, { applyToFilters: true });
-    toast({
-      title: "ユーザー設定を保存しました",
-      description: "現在のコースフィルターにも反映しました。",
-    });
-    onOpenChange(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+
+    try {
+      await saveUserCoursePreferences(draftPreferences, { applyToFilters: true });
+      toast({
+        title: "ユーザー設定を保存しました",
+        description: "現在のコースフィルターにも反映しました。",
+      });
+      onOpenChange(false);
+    } catch {
+      toast({
+        title: "保存に失敗しました",
+        description: "時間をおいて再試行してください。",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -266,10 +279,15 @@ export function UserCoursePreferencesDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             キャンセル
           </Button>
-          <Button type="button" onClick={handleSave}>
+          <Button type="button" onClick={handleSave} disabled={isSaving}>
             保存して適用
           </Button>
         </DialogFooter>

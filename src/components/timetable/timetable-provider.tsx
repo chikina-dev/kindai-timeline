@@ -7,6 +7,7 @@ import {
 } from "react";
 import { SWRConfig } from "swr";
 import { CourseFilterProvider } from "@/components/timetable/course-filter-provider";
+import type { UserCoursePreferences } from "@/lib/user-course-preferences";
 import type { Semester } from "@/types/timetable";
 import type { TimetableSwrFallback } from "@/types/timetable-data";
 
@@ -21,7 +22,7 @@ type TimeTableProviderProps = {
   availableAcademicYears: number[];
   initialSemester: Semester;
   warningMessage?: string;
-  sessionEmail?: string | null;
+  initialUserCoursePreferences: UserCoursePreferences;
 };
 
 const TimeTableContext = createContext<TimeTableContextValue | null>(null);
@@ -33,7 +34,7 @@ export function TimeTableProvider({
   availableAcademicYears,
   initialSemester,
   warningMessage,
-  sessionEmail,
+  initialUserCoursePreferences,
 }: TimeTableProviderProps) {
   return (
     <SWRConfig value={{ fallback }}>
@@ -42,7 +43,7 @@ export function TimeTableProvider({
           initialAcademicYear={initialAcademicYear}
           availableAcademicYears={availableAcademicYears}
           initialSemester={initialSemester}
-          sessionEmail={sessionEmail}
+          initialUserCoursePreferences={initialUserCoursePreferences}
         >
           {children}
         </CourseFilterProvider>

@@ -14,10 +14,7 @@ import { getCourseCountForSlot } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
 import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
 import {
-  createDefaultUserCoursePreferences,
-  getUserCoursePreferencesStorageKey,
   resolveUserCourseProfile,
-  sanitizeUserCoursePreferences,
   type ResolvedUserCourseProfile,
   type UserCoursePreferences,
 } from "@/lib/user-course-preferences";
@@ -61,7 +58,7 @@ type SharedCourseFilterContextValue = {
   saveUserCoursePreferences: (
     preferences: UserCoursePreferences,
     options?: { applyToFilters?: boolean }
-  ) => void;
+  ) => Promise<void>;
   resolvedUserCourseProfile: ResolvedUserCourseProfile;
   applyProfileFilters: () => void;
 };
@@ -71,7 +68,7 @@ type CourseFilterProviderProps = {
   initialAcademicYear: number;
   availableAcademicYears: number[];
   initialSemester: Semester;
-  sessionEmail?: string | null;
+  initialUserCoursePreferences: UserCoursePreferences;
 };
 
 const SharedCourseFilterContext =
@@ -82,7 +79,7 @@ export function CourseFilterProvider({
   initialAcademicYear,
   availableAcademicYears,
   initialSemester,
-  sessionEmail,
+  initialUserCoursePreferences,
 }: CourseFilterProviderProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -95,12 +92,9 @@ export function CourseFilterProvider({
   const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
   const [selectedClasses, setSelectedClassesState] = useState<string[]>([]);
   const [userCoursePreferences, setUserCoursePreferences] =
-    useState<UserCoursePreferences>(() =>
-      createDefaultUserCoursePreferences(sessionEmail)
-    );
+    useState<UserCoursePreferences>(initialUserCoursePreferences);
   const [autoAppliedGrades, setAutoAppliedGrades] = useState<number[]>([]);
   const [autoAppliedClasses, setAutoAppliedClasses] = useState<string[]>([]);
-  const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   const {
     data: courseAvailabilityCounts,
     isLoading: isCourseAvailabilityLoading,
@@ -134,34 +128,42 @@ export function CourseFilterProvider({
       preferences: UserCoursePreferences,
       options?: { applyToFilters?: boolean }
     ) => {
-      const nextPreferences = sanitizeUserCoursePreferences(
-        preferences,
-        sessionEmail
-      );
+      const savePreferences = async () => {
+        const response = await fetch("/api/user-course-preferences", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(preferences),
+        });
 
-      setUserCoursePreferences(nextPreferences);
-      window.localStorage.setItem(
-        getUserCoursePreferencesStorageKey(sessionEmail),
-        JSON.stringify(nextPreferences)
-      );
+        if (!response.ok) {
+          throw new Error("Failed to save user course preferences");
+        }
 
-      if (options?.applyToFilters) {
-        const nextProfile = resolveUserCourseProfile(
-          nextPreferences,
-          selectedAcademicYear
-        );
-        const normalizedSelectedClasses = normalizeSelectedCourseClasses(
-          nextProfile.defaultSelectedClasses
-        );
+        const nextPreferences = (await response.json()) as UserCoursePreferences;
+        setUserCoursePreferences(nextPreferences);
 
-        setSearchTerm("");
-        setSelectedGrades(nextProfile.defaultSelectedGrades);
-        setSelectedClassesState(normalizedSelectedClasses);
-        setAutoAppliedGrades(nextProfile.defaultSelectedGrades);
-        setAutoAppliedClasses(normalizedSelectedClasses);
-      }
+        if (options?.applyToFilters) {
+          const nextProfile = resolveUserCourseProfile(
+            nextPreferences,
+            selectedAcademicYear
+          );
+          const normalizedSelectedClasses = normalizeSelectedCourseClasses(
+            nextProfile.defaultSelectedClasses
+          );
+
+          setSearchTerm("");
+          setSelectedGrades(nextProfile.defaultSelectedGrades);
+          setSelectedClassesState(normalizedSelectedClasses);
+          setAutoAppliedGrades(nextProfile.defaultSelectedGrades);
+          setAutoAppliedClasses(normalizedSelectedClasses);
+        }
+      };
+
+      return savePreferences();
     },
-    [selectedAcademicYear, sessionEmail]
+    [selectedAcademicYear]
   );
 
   const getAvailableCourseCount = useCallback(
@@ -171,27 +173,10 @@ export function CourseFilterProvider({
   );
 
   useEffect(() => {
-    let storedPreferences: unknown = null;
-
-    try {
-      const rawPreferences = window.localStorage.getItem(
-        getUserCoursePreferencesStorageKey(sessionEmail)
-      );
-      storedPreferences = rawPreferences ? JSON.parse(rawPreferences) : null;
-    } catch {
-      storedPreferences = null;
-    }
-
-    const nextPreferences = sanitizeUserCoursePreferences(
-      storedPreferences,
-      sessionEmail
-    );
-
-    setUserCoursePreferences(nextPreferences);
+    setUserCoursePreferences(initialUserCoursePreferences);
     setAutoAppliedGrades([]);
     setAutoAppliedClasses([]);
-    setHasLoadedPreferences(true);
-  }, [sessionEmail]);
+  }, [initialUserCoursePreferences]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -214,10 +199,6 @@ export function CourseFilterProvider({
   }, [pathname, router, searchParams, selectedAcademicYear, selectedSemester]);
 
   useEffect(() => {
-    if (!hasLoadedPreferences) {
-      return;
-    }
-
     const normalizedDefaultClasses = normalizeSelectedCourseClasses(
       resolvedUserCourseProfile.defaultSelectedClasses
     );
@@ -248,7 +229,6 @@ export function CourseFilterProvider({
   }, [
     autoAppliedClasses,
     autoAppliedGrades,
-    hasLoadedPreferences,
     resolvedUserCourseProfile,
     searchTerm,
     selectedClasses,
