@@ -21,6 +21,7 @@ type TimeTableProviderProps = {
   availableAcademicYears: number[];
   initialSemester: Semester;
   warningMessage?: string;
+  sessionEmail?: string | null;
 };
 
 const TimeTableContext = createContext<TimeTableContextValue | null>(null);
@@ -32,6 +33,7 @@ export function TimeTableProvider({
   availableAcademicYears,
   initialSemester,
   warningMessage,
+  sessionEmail,
 }: TimeTableProviderProps) {
   return (
     <SWRConfig value={{ fallback }}>
@@ -40,6 +42,7 @@ export function TimeTableProvider({
           initialAcademicYear={initialAcademicYear}
           availableAcademicYears={availableAcademicYears}
           initialSemester={initialSemester}
+          sessionEmail={sessionEmail}
         >
           {children}
         </CourseFilterProvider>

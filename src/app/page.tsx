@@ -37,6 +37,7 @@ export default async function HomePage({
       availableAcademicYears={availableAcademicYears}
       initialSemester={initialSemester}
       warningMessage={warningMessage}
+      sessionEmail={session.user.email ?? null}
     >
       <TimetablePage
         session={session}

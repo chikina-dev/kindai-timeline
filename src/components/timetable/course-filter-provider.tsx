@@ -13,10 +13,32 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getCourseCountForSlot } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
 import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
+import {
+  createDefaultUserCoursePreferences,
+  getUserCoursePreferencesStorageKey,
+  resolveUserCourseProfile,
+  sanitizeUserCoursePreferences,
+  type ResolvedUserCourseProfile,
+  type UserCoursePreferences,
+} from "@/lib/user-course-preferences";
 import { useCourseAvailabilityCounts } from "@/hooks/use-timetable";
 import type { Semester } from "@/types/timetable";
 import type { DayOfWeek } from "@/types/timetable";
 import type { CourseAvailabilityCounts } from "@/types/timetable-data";
+
+function areNumberArraysEqual(left: number[], right: number[]) {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
+
+function areStringArraysEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
 
 type SharedCourseFilterContextValue = {
   selectedAcademicYear: number;
@@ -35,6 +57,13 @@ type SharedCourseFilterContextValue = {
   ondemandCourseCount: number;
   isCourseAvailabilityLoading: boolean;
   resetSharedFilters: () => void;
+  userCoursePreferences: UserCoursePreferences;
+  saveUserCoursePreferences: (
+    preferences: UserCoursePreferences,
+    options?: { applyToFilters?: boolean }
+  ) => void;
+  resolvedUserCourseProfile: ResolvedUserCourseProfile;
+  applyProfileFilters: () => void;
 };
 
 type CourseFilterProviderProps = {
@@ -42,6 +71,7 @@ type CourseFilterProviderProps = {
   initialAcademicYear: number;
   availableAcademicYears: number[];
   initialSemester: Semester;
+  sessionEmail?: string | null;
 };
 
 const SharedCourseFilterContext =
@@ -52,6 +82,7 @@ export function CourseFilterProvider({
   initialAcademicYear,
   availableAcademicYears,
   initialSemester,
+  sessionEmail,
 }: CourseFilterProviderProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -63,6 +94,13 @@ export function CourseFilterProvider({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
   const [selectedClasses, setSelectedClassesState] = useState<string[]>([]);
+  const [userCoursePreferences, setUserCoursePreferences] =
+    useState<UserCoursePreferences>(() =>
+      createDefaultUserCoursePreferences(sessionEmail)
+    );
+  const [autoAppliedGrades, setAutoAppliedGrades] = useState<number[]>([]);
+  const [autoAppliedClasses, setAutoAppliedClasses] = useState<string[]>([]);
+  const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   const {
     data: courseAvailabilityCounts,
     isLoading: isCourseAvailabilityLoading,
@@ -74,12 +112,86 @@ export function CourseFilterProvider({
   const setSelectedClasses = useCallback((values: string[]) => {
     setSelectedClassesState(normalizeSelectedCourseClasses(values));
   }, []);
+  const resolvedUserCourseProfile = useMemo(
+    () => resolveUserCourseProfile(userCoursePreferences, selectedAcademicYear),
+    [selectedAcademicYear, userCoursePreferences]
+  );
+
+  const applyProfileFilters = useCallback(() => {
+    const normalizedSelectedClasses = normalizeSelectedCourseClasses(
+      resolvedUserCourseProfile.defaultSelectedClasses
+    );
+
+    setSearchTerm("");
+    setSelectedGrades(resolvedUserCourseProfile.defaultSelectedGrades);
+    setSelectedClassesState(normalizedSelectedClasses);
+    setAutoAppliedGrades(resolvedUserCourseProfile.defaultSelectedGrades);
+    setAutoAppliedClasses(normalizedSelectedClasses);
+  }, [resolvedUserCourseProfile]);
+
+  const saveUserCoursePreferences = useCallback(
+    (
+      preferences: UserCoursePreferences,
+      options?: { applyToFilters?: boolean }
+    ) => {
+      const nextPreferences = sanitizeUserCoursePreferences(
+        preferences,
+        sessionEmail
+      );
+
+      setUserCoursePreferences(nextPreferences);
+      window.localStorage.setItem(
+        getUserCoursePreferencesStorageKey(sessionEmail),
+        JSON.stringify(nextPreferences)
+      );
+
+      if (options?.applyToFilters) {
+        const nextProfile = resolveUserCourseProfile(
+          nextPreferences,
+          selectedAcademicYear
+        );
+        const normalizedSelectedClasses = normalizeSelectedCourseClasses(
+          nextProfile.defaultSelectedClasses
+        );
+
+        setSearchTerm("");
+        setSelectedGrades(nextProfile.defaultSelectedGrades);
+        setSelectedClassesState(normalizedSelectedClasses);
+        setAutoAppliedGrades(nextProfile.defaultSelectedGrades);
+        setAutoAppliedClasses(normalizedSelectedClasses);
+      }
+    },
+    [selectedAcademicYear, sessionEmail]
+  );
 
   const getAvailableCourseCount = useCallback(
     (day: DayOfWeek, period: number) =>
       getCourseCountForSlot(courseAvailabilityCounts, day, period),
     [courseAvailabilityCounts]
   );
+
+  useEffect(() => {
+    let storedPreferences: unknown = null;
+
+    try {
+      const rawPreferences = window.localStorage.getItem(
+        getUserCoursePreferencesStorageKey(sessionEmail)
+      );
+      storedPreferences = rawPreferences ? JSON.parse(rawPreferences) : null;
+    } catch {
+      storedPreferences = null;
+    }
+
+    const nextPreferences = sanitizeUserCoursePreferences(
+      storedPreferences,
+      sessionEmail
+    );
+
+    setUserCoursePreferences(nextPreferences);
+    setAutoAppliedGrades([]);
+    setAutoAppliedClasses([]);
+    setHasLoadedPreferences(true);
+  }, [sessionEmail]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -100,6 +212,48 @@ export function CourseFilterProvider({
       scroll: false,
     });
   }, [pathname, router, searchParams, selectedAcademicYear, selectedSemester]);
+
+  useEffect(() => {
+    if (!hasLoadedPreferences) {
+      return;
+    }
+
+    const normalizedDefaultClasses = normalizeSelectedCourseClasses(
+      resolvedUserCourseProfile.defaultSelectedClasses
+    );
+    const matchesAutoAppliedFilters =
+      areNumberArraysEqual(selectedGrades, autoAppliedGrades) &&
+      areStringArraysEqual(selectedClasses, autoAppliedClasses);
+    const shouldApplyInitialDefaults =
+      autoAppliedGrades.length === 0 &&
+      autoAppliedClasses.length === 0 &&
+      selectedGrades.length === 0 &&
+      selectedClasses.length === 0 &&
+      searchTerm.length === 0;
+    const defaultsChanged =
+      !areNumberArraysEqual(
+        autoAppliedGrades,
+        resolvedUserCourseProfile.defaultSelectedGrades
+      ) ||
+      !areStringArraysEqual(autoAppliedClasses, normalizedDefaultClasses);
+
+    if ((!matchesAutoAppliedFilters && !shouldApplyInitialDefaults) || !defaultsChanged) {
+      return;
+    }
+
+    setSelectedGrades(resolvedUserCourseProfile.defaultSelectedGrades);
+    setSelectedClassesState(normalizedDefaultClasses);
+    setAutoAppliedGrades(resolvedUserCourseProfile.defaultSelectedGrades);
+    setAutoAppliedClasses(normalizedDefaultClasses);
+  }, [
+    autoAppliedClasses,
+    autoAppliedGrades,
+    hasLoadedPreferences,
+    resolvedUserCourseProfile,
+    searchTerm,
+    selectedClasses,
+    selectedGrades,
+  ]);
 
   const value = useMemo(
     () => ({
@@ -123,9 +277,14 @@ export function CourseFilterProvider({
         setSelectedGrades([]);
         setSelectedClassesState([]);
       },
+      userCoursePreferences,
+      saveUserCoursePreferences,
+      resolvedUserCourseProfile,
+      applyProfileFilters,
     }),
     [
       availableAcademicYears,
+      applyProfileFilters,
       searchTerm,
       selectedAcademicYear,
       selectedClasses,
@@ -135,6 +294,9 @@ export function CourseFilterProvider({
       courseAvailabilityCounts,
       getAvailableCourseCount,
       isCourseAvailabilityLoading,
+      resolvedUserCourseProfile,
+      saveUserCoursePreferences,
+      userCoursePreferences,
     ]
   );
 
