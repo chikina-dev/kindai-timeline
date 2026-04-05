@@ -95,6 +95,8 @@ npm run deploy
 # or similar package manager command
 ```
 
+`npm run build` now runs the OpenNext Cloudflare build so CI or Cloudflare Workers builds that call the standard build command also produce the `.open-next` artifacts required by `wrangler deploy`. If you need a plain Next.js production build locally, use `npm run build:next`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
