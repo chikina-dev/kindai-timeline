@@ -1,4 +1,4 @@
-import type { DayOfWeek } from "@/types/timetable";
+import type { Course, DayOfWeek, Semester } from "@/types/timetable";
 
 export const PERIOD_TIMES = [
   { start: "09:00", end: "10:30" },
@@ -36,4 +36,26 @@ export function getPeriodTimeRange(periods: number[]) {
     start: firstPeriod.start,
     end: lastPeriod.end,
   };
+}
+
+export function findCourseByPosition(
+  timetable: Course[],
+  day: string,
+  period: number
+) {
+  return timetable.find(
+    (course) => course.day === day && course.periods?.includes(period)
+  );
+}
+
+export function isInitialTimetableSelection(
+  selectedAcademicYear: number,
+  selectedSemester: Semester,
+  initialAcademicYear: number,
+  initialSemester: Semester
+) {
+  return (
+    selectedAcademicYear === initialAcademicYear &&
+    selectedSemester === initialSemester
+  );
 }

@@ -20,6 +20,8 @@ export default async function HomePage({
     initialAcademicYear,
     availableAcademicYears,
     initialSemester,
+    initialTimetable,
+    initialCourseAvailabilityCounts,
     warningMessage,
     swrFallback,
   } = await getTimeTablePageInitialData({
@@ -36,7 +38,13 @@ export default async function HomePage({
       initialSemester={initialSemester}
       warningMessage={warningMessage}
     >
-      <TimetablePage session={session} />
+      <TimetablePage
+        session={session}
+        initialAcademicYear={initialAcademicYear}
+        initialSemester={initialSemester}
+        initialTimetable={initialTimetable}
+        initialCourseAvailabilityCounts={initialCourseAvailabilityCounts}
+      />
     </TimeTableProvider>
   );
 }

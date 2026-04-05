@@ -138,6 +138,8 @@ export async function getTimeTablePageInitialData(input: {
     initialAcademicYear,
     availableAcademicYears,
     initialSemester,
+    initialTimetable,
+    initialCourseAvailabilityCounts,
     warningMessage:
       academicYearsWarningMessage ?? initialDataWarningMessage,
     swrFallback: buildTimetableSwrFallback(

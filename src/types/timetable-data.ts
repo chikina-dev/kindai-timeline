@@ -25,6 +25,8 @@ export type TimetablePageInitialData = {
   initialAcademicYear: number;
   availableAcademicYears: number[];
   initialSemester: Semester;
+  initialTimetable: Course[];
+  initialCourseAvailabilityCounts: CourseAvailabilityCounts;
   warningMessage?: string;
   swrFallback: TimetableSwrFallback;
 };

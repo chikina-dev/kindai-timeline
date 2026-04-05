@@ -1,31 +1,39 @@
 import type { Session } from "next-auth";
+import type { Course, Semester } from "@/types/timetable";
 import { TimetableGrid } from "@/components/timetable/timetable-grid";
 import { TimetableHeader } from "@/components/timetable/timetable-header";
 import { TimetableSidebar } from "@/components/timetable/timetable-sidebar";
-import { useTimeTableContext } from "@/components/timetable/timetable-provider";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { TimetableWarning } from "@/components/timetable/timetable-warning";
+import type { CourseAvailabilityCounts } from "@/types/timetable-data";
 
 type TimetablePageProps = {
   session: Session;
+  initialAcademicYear: number;
+  initialSemester: Semester;
+  initialTimetable: Course[];
+  initialCourseAvailabilityCounts: CourseAvailabilityCounts;
 };
 
-export function TimetablePage({ session }: TimetablePageProps) {
-  const { warningMessage } = useTimeTableContext();
-
+export function TimetablePage({
+  session,
+  initialAcademicYear,
+  initialSemester,
+  initialTimetable,
+  initialCourseAvailabilityCounts,
+}: TimetablePageProps) {
   return (
     <div className="min-h-screen bg-background">
       <TimetableHeader session={session} />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {warningMessage && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{warningMessage}</AlertDescription>
-          </Alert>
-        )}
+        <TimetableWarning />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
           <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-            <TimetableGrid />
+            <TimetableGrid
+              initialAcademicYear={initialAcademicYear}
+              initialSemester={initialSemester}
+              initialTimetable={initialTimetable}
+              initialCourseAvailabilityCounts={initialCourseAvailabilityCounts}
+            />
           </div>
           <aside className="min-w-0 w-[min(100%,320px)] justify-self-start space-y-4 xl:sticky xl:top-24 xl:self-start">
             <TimetableSidebar />
