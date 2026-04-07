@@ -3,8 +3,8 @@
 import { type ReactNode } from "react";
 import { SWRConfig } from "swr";
 import { CourseFilterProvider } from "@/components/timetable/course-filter-provider";
-import type { Semester } from "@/types/timetable";
-import type { TimetableSwrFallback } from "@/types/timetable-data";
+import type { Semester } from "@/types/course-domain";
+import type { TimetableSwrFallback } from "@/types/timetable-query";
 
 type TimeTableProviderProps = {
   children: ReactNode;

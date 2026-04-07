@@ -1,5 +1,5 @@
-import type { AcademicCalendarSession, Course } from "@/types/timetable";
-import type { DayOfWeek, Semester } from "@/types/timetable";
+import type { AcademicCalendarSession, Course } from "@/types/course-records";
+import type { DayOfWeek, Semester } from "@/types/course-domain";
 import { getPeriodTimeRange } from "@/lib/timetable";
 
 export type IcsRangePreset = "semester" | "thisWeek";

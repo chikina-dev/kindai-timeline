@@ -3,8 +3,8 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { courses, userCourses } from "@/lib/db/schema";
-import type { Course } from "@/types/timetable";
-import type { TimetableQueryFilters } from "@/types/timetable-data";
+import type { Course } from "@/types/course-records";
+import type { TimetableQueryFilters } from "@/types/timetable-query";
 
 export async function getUserTimetable(
   userId: string,

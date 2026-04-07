@@ -1,4 +1,4 @@
-import type { Semester } from "@/types/timetable";
+import type { Semester } from "@/types/course-domain";
 
 const VALID_SEMESTERS = new Set<Semester>(["前期", "後期"]);
 const SEMESTER_QUERY_VALUE_MAP = {

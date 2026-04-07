@@ -1,6 +1,6 @@
 import type { UserCoursePreferences } from "@/lib/user-course-preferences";
-import type { DayOfWeek } from "@/types/timetable";
-import type { AcademicCalendarSession, Course, Semester } from "@/types/timetable";
+import type { AcademicCalendarSession, Course } from "@/types/course-records";
+import type { DayOfWeek, Semester } from "@/types/course-domain";
 
 export type AcademicTermFilters = {
   semester?: Semester;

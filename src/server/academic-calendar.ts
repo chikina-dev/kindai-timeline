@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { academicCalendarSessions } from "@/lib/db/schema";
-import type { AcademicCalendarSessionFilters } from "@/types/timetable-data";
+import type { AcademicCalendarSessionFilters } from "@/types/timetable-query";
 
 export async function getAcademicCalendarSessions(
   filters?: AcademicCalendarSessionFilters

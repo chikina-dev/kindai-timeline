@@ -1,10 +1,10 @@
 import { toSemesterQueryValue } from "@/lib/academic-term";
-import type { DayOfWeek } from "@/types/timetable";
+import type { DayOfWeek } from "@/types/course-domain";
 import type {
   CourseAvailabilityCounts,
   CourseAvailabilityQueryFilters,
   CourseSlotKey,
-} from "@/types/timetable-data";
+} from "@/types/timetable-query";
 
 export function buildCourseAvailabilityApiUrl(
   basePath = "/api/courses/counts",

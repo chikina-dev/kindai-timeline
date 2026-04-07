@@ -1,5 +1,5 @@
 import { toSemesterQueryValue } from "@/lib/academic-term";
-import type { TimetableQueryFilters } from "@/types/timetable-data";
+import type { TimetableQueryFilters } from "@/types/timetable-query";
 
 export const TIMETABLE_ENDPOINT = "/api/timetable";
 export const TIMETABLE_PAGE_DATA_ENDPOINT = "/api/page-data";

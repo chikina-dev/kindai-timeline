@@ -1,5 +1,5 @@
 import { toSemesterQueryValue } from "@/lib/academic-term";
-import type { AcademicCalendarSessionFilters } from "@/types/timetable-data";
+import type { AcademicCalendarSessionFilters } from "@/types/timetable-query";
 
 export function buildAcademicCalendarApiUrl(
   basePath = "/api/academic-calendar",

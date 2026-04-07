@@ -10,7 +10,8 @@ import {
   renderIcsTemplate,
   type IcsRangePreset,
 } from "@/lib/ics";
-import type { Course, Semester } from "@/types/timetable";
+import type { Course } from "@/types/course-records";
+import type { Semester } from "@/types/course-domain";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

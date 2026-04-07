@@ -1,4 +1,4 @@
-import type { Course } from "@/types/timetable";
+import type { Course } from "@/types/course-records";
 
 export type CourseGroup = {
   name: string;

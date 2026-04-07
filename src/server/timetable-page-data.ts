@@ -17,13 +17,14 @@ import {
 import { getUserCoursePreferences } from "@/server/user-course-preferences";
 import { getCourseAvailabilityCounts } from "@/server/course-availability";
 import { getUserTimetable } from "@/server/timetable";
-import type { Course, Semester } from "@/types/timetable";
+import type { Course } from "@/types/course-records";
+import type { Semester } from "@/types/course-domain";
 import type {
   CourseAvailabilityCounts,
   TimetablePageInitialData,
   TimetableSnapshot,
   TimetableSwrFallback,
-} from "@/types/timetable-data";
+} from "@/types/timetable-query";
 
 const DATABASE_UNAVAILABLE_WARNING =
   "データベースに接続できないため、最新の時間割データを取得できませんでした。しばらくしてから再読み込みしてください。";

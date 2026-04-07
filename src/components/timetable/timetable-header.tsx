@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { CalendarDays, BookOpen, GraduationCap, Globe } from "lucide-react";
 import type { Session } from "next-auth";
-import { SEMESTERS } from "@/types/timetable";
+import { SEMESTERS } from "@/types/course-domain";
 
 type TimetableHeaderProps = {
   session: Session;

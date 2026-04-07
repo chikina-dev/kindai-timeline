@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { courses } from "@/lib/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
-import { isCategory, isDayOfWeek } from "@/types/timetable";
+import { isCategory, isDayOfWeek } from "@/types/course-domain";
 
 export async function GET(request: Request) {
   const session = await auth();

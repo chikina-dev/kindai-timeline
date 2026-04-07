@@ -1,4 +1,5 @@
-import type { Course, DayOfWeek, Semester } from "@/types/timetable";
+import type { Course } from "@/types/course-records";
+import type { DayOfWeek, Semester } from "@/types/course-domain";
 
 export const PERIOD_TIMES = [
   { start: "09:00", end: "10:30" },

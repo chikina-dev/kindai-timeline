@@ -8,14 +8,15 @@ import {
   buildTimetablePageDataApiUrl,
   TIMETABLE_PAGE_DATA_ENDPOINT,
 } from "@/lib/timetable-api";
-import type { AcademicCalendarSession, Course, Semester } from "@/types/timetable";
+import type { AcademicCalendarSession, Course } from "@/types/course-records";
+import type { Semester } from "@/types/course-domain";
 import type {
   AcademicCalendarSessionFilters,
   CourseAvailabilityCounts,
   CourseAvailabilityQueryFilters,
   TimetableQueryFilters,
   TimetableSnapshot,
-} from "@/types/timetable-data";
+} from "@/types/timetable-query";
 
 const fetcher = async (url: string): Promise<Course[]> => {
   const res = await fetch(url);

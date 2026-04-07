@@ -26,8 +26,9 @@ import {
   type UserCoursePreferences,
 } from "@/lib/user-course-preferences";
 import { useTimetableSnapshot } from "@/hooks/use-timetable";
-import type { Course, DayOfWeek, Semester } from "@/types/timetable";
-import type { CourseAvailabilityCounts, TimetableSnapshot } from "@/types/timetable-data";
+import type { Course } from "@/types/course-records";
+import type { DayOfWeek, Semester } from "@/types/course-domain";
+import type { CourseAvailabilityCounts, TimetableSnapshot } from "@/types/timetable-query";
 
 function areNumberArraysEqual(left: number[], right: number[]) {
   return (

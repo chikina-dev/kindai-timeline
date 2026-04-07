@@ -2,7 +2,7 @@
 
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
 import { PERIOD_TIMES } from "@/lib/timetable";
-import { DAYS, PERIODS, type DayOfWeek } from "@/types/timetable";
+import { DAYS, PERIODS, type DayOfWeek } from "@/types/course-domain";
 import { TimetableCell } from "./timetable-cell";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";

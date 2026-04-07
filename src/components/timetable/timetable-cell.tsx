@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { type Course, type DayOfWeek } from "@/types/timetable";
+import type { Course } from "@/types/course-records";
+import type { DayOfWeek } from "@/types/course-domain";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { CourseSelectDialog } from "./course-select-dialog";

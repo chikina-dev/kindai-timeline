@@ -4,11 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { createCourseSlotKey } from "@/lib/course-availability";
 import { db } from "@/lib/db";
 import { courses } from "@/lib/db/schema";
-import { isDayOfWeek, type DayOfWeek } from "@/types/timetable";
+import { isDayOfWeek, type DayOfWeek } from "@/types/course-domain";
 import type {
   CourseAvailabilityCounts,
   CourseAvailabilityQueryFilters,
-} from "@/types/timetable-data";
+} from "@/types/timetable-query";
 
 export async function getCourseAvailabilityCounts(
   filters?: CourseAvailabilityQueryFilters

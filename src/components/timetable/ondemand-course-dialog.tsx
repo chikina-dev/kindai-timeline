@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useCourses } from "@/hooks/use-timetable";
-import { type Course, CATEGORIES } from "@/types/timetable";
+import type { Course } from "@/types/course-records";
+import { CATEGORIES } from "@/types/course-domain";
 import { Check, BookOpen, User, MapPin, GraduationCap, ChevronDown } from "lucide-react";
 import {
   filterCourses,
