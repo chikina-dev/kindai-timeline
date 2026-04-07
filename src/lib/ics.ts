@@ -1,6 +1,6 @@
-import type { Course } from "@/types/timetable";
-import type { DayOfWeek } from "@/types/timetable";
-import { getDayNumber, getPeriodTimeRange } from "@/lib/timetable";
+import type { AcademicCalendarSession, Course } from "@/types/timetable";
+import type { DayOfWeek, Semester } from "@/types/timetable";
+import { getPeriodTimeRange } from "@/lib/timetable";
 
 export type IcsRangePreset = "semester" | "thisWeek";
 
@@ -23,6 +23,7 @@ export type IcsExportOptions = {
   calendarName?: string;
   now?: Date;
   rangePreset: IcsRangePreset;
+  sessions: AcademicCalendarSession[];
   template: string;
 };
 
@@ -31,6 +32,7 @@ export type IcsExportResult = {
   fileName: string;
   includedCount: number;
   skippedCount: number;
+  sessionCount: number;
 };
 
 export const ICS_TEMPLATE_VARIABLES: IcsTemplateVariable[] = [
@@ -65,37 +67,34 @@ export function createTimetableIcs(
 ): IcsExportResult {
   const now = options.now ?? new Date();
   const academicYear = inferAcademicYear(courses, now);
-  const range = getRangeFromPreset(options.rangePreset, academicYear, now);
+  const semester = inferSemester(courses, now);
+  const range = getRangeFromPreset(options.rangePreset, academicYear, semester, now);
   const dtStamp = formatUtcDateTime(now);
   const calendarName = options.calendarName?.trim() || "近大時間割";
+  const sessions = getSessionsInRange(options.sessions, range);
 
   let includedCount = 0;
   let skippedCount = 0;
 
   const events = courses
-    .map((course) => {
+    .flatMap((course) => {
       const exportableCourse = toExportableCourse(course);
       if (!exportableCourse) {
         skippedCount += 1;
-        return null;
+        return [];
       }
 
-      const event = buildEvent(
+      const courseEvents = buildEventsForCourse(
         exportableCourse,
         options.template,
-        range,
+        sessions,
         dtStamp
       );
 
-      if (!event) {
-        skippedCount += 1;
-        return null;
-      }
-
-      includedCount += 1;
-      return event;
+      includedCount += courseEvents.length;
+      return courseEvents;
     })
-    .filter((event): event is string[] => Boolean(event));
+    .sort(compareEventLines);
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -111,18 +110,23 @@ export function createTimetableIcs(
 
   return {
     content: `${lines.flatMap(foldIcsLine).join("\r\n")}\r\n`,
-    fileName: buildFileName(academicYear, options.rangePreset, now),
+    fileName: buildFileName(academicYear, semester, options.rangePreset, now),
     includedCount,
     skippedCount,
+    sessionCount: sessions.length,
   };
 }
 
-export function getRangeLabel(rangePreset: IcsRangePreset, academicYear: number) {
+export function getRangeLabel(
+  rangePreset: IcsRangePreset,
+  academicYear: number,
+  semester: Semester
+) {
   if (rangePreset === "thisWeek") {
     return "今週のみ";
   }
 
-  return `${academicYear}年4月1日から7月31日まで`;
+  return `${academicYear}年度${semester}の授業実施日すべて`;
 }
 
 export function renderIcsTemplate(template: string, course: Course): string {
@@ -132,10 +136,22 @@ export function renderIcsTemplate(template: string, course: Course): string {
   });
 }
 
+function buildEventsForCourse(
+  course: ExportableCourse,
+  template: string,
+  sessions: AcademicCalendarSession[],
+  dtStamp: string
+) {
+  return sessions
+    .filter((session) => session.effectiveDay === course.day)
+    .map((session) => buildEvent(course, template, session, dtStamp))
+    .filter((event): event is string[] => Boolean(event));
+}
+
 function buildEvent(
   course: ExportableCourse,
   template: string,
-  range: DateRange,
+  session: AcademicCalendarSession,
   dtStamp: string
 ) {
   const periodRange = getPeriodTimeRange(course.periods);
@@ -143,23 +159,18 @@ function buildEvent(
     return null;
   }
 
-  const firstOccurrence = findFirstOccurrence(course.day, range.start);
-  if (firstOccurrence > range.end) {
-    return null;
-  }
-
-  const startsAt = setTime(firstOccurrence, periodRange.start);
-  const endsAt = setTime(firstOccurrence, periodRange.end);
+  const sessionDate = parseDateString(session.actualDate);
+  const startsAt = setTime(sessionDate, periodRange.start);
+  const endsAt = setTime(sessionDate, periodRange.end);
   const summary = renderIcsTemplate(template, course).trim() || course.name;
-  const description = buildDescription(course);
+  const description = buildDescription(course, session);
 
   return [
     "BEGIN:VEVENT",
-    `UID:${course.id}@kindai-timetable`,
+    `UID:${course.id}-${session.actualDate}@kindai-timetable`,
     `DTSTAMP:${dtStamp}`,
     `DTSTART:${formatLocalDateTime(startsAt)}`,
     `DTEND:${formatLocalDateTime(endsAt)}`,
-    `RRULE:FREQ=WEEKLY;UNTIL=${formatLocalDateTime(range.end)}`,
     `SUMMARY:${escapeIcsText(summary)}`,
     `DESCRIPTION:${escapeIcsText(description)}`,
     `LOCATION:${escapeIcsText(course.classroom ?? "")}`,
@@ -167,13 +178,22 @@ function buildEvent(
   ];
 }
 
-function buildDescription(course: ExportableCourse) {
+function buildDescription(
+  course: ExportableCourse,
+  session: AcademicCalendarSession
+) {
   const lines = [
     `科目名: ${course.name}`,
-    `曜日時限: ${course.day}${formatPeriodLabel(course.periods)}`,
+    `授業日: ${formatSessionDateLabel(session)}`,
+    `曜日時限: ${session.effectiveDay}${formatPeriodLabel(course.periods)}`,
+    `授業回: 第${session.lectureNumber}回`,
     `分類: ${course.category}`,
     `単位: ${course.credits}`,
   ];
+
+  if (session.actualDay !== session.effectiveDay) {
+    lines.push(`振替実施: ${session.rawLabel}`);
+  }
 
   if (course.instructors?.length) {
     lines.push(`担当: ${course.instructors.join(", ")}`);
@@ -200,6 +220,7 @@ function buildDescription(course: ExportableCourse) {
 
 function buildFileName(
   academicYear: number,
+  semester: Semester,
   rangePreset: IcsRangePreset,
   now: Date
 ) {
@@ -207,12 +228,13 @@ function buildFileName(
     return `kindai-timetable-week-${formatCompactDate(now)}.ics`;
   }
 
-  return `kindai-timetable-${academicYear}-spring.ics`;
+  return `kindai-timetable-${academicYear}-${semester === "前期" ? "spring" : "fall"}.ics`;
 }
 
 function getRangeFromPreset(
   rangePreset: IcsRangePreset,
   academicYear: number,
+  semester: Semester,
   now: Date
 ): DateRange {
   if (rangePreset === "thisWeek") {
@@ -222,8 +244,14 @@ function getRangeFromPreset(
   }
 
   return {
-    start: new Date(academicYear, 3, 1, 0, 0, 0),
-    end: new Date(academicYear, 6, 31, 23, 59, 59),
+    start:
+      semester === "前期"
+        ? new Date(academicYear, 3, 1, 0, 0, 0)
+        : new Date(academicYear, 8, 1, 0, 0, 0),
+    end:
+      semester === "前期"
+        ? new Date(academicYear, 7, 31, 23, 59, 59)
+        : new Date(academicYear + 1, 2, 31, 23, 59, 59),
   };
 }
 
@@ -278,14 +306,20 @@ function inferAcademicYear(courses: Course[], now: Date) {
   return academicYear ?? now.getFullYear();
 }
 
-function findFirstOccurrence(day: DayOfWeek, rangeStart: Date) {
-  const targetDay = getDayNumber(day);
-  const startDay = rangeStart.getDay();
-  const diff = (targetDay - startDay + 7) % 7;
-  const occurrence = new Date(rangeStart);
-  occurrence.setDate(rangeStart.getDate() + diff);
-  occurrence.setHours(0, 0, 0, 0);
-  return occurrence;
+function inferSemester(courses: Course[], now: Date): Semester {
+  return courses.find((course) => course.semester)?.semester ?? (now.getMonth() + 1 <= 8 ? "前期" : "後期");
+}
+
+function getSessionsInRange(
+  sessions: AcademicCalendarSession[],
+  range: DateRange
+) {
+  return sessions
+    .filter((session) => {
+      const date = parseDateString(session.actualDate);
+      return date >= range.start && date <= range.end;
+    })
+    .sort((left, right) => left.actualDate.localeCompare(right.actualDate));
 }
 
 function startOfWeek(date: Date) {
@@ -311,6 +345,15 @@ function setTime(date: Date, time: string) {
   return next;
 }
 
+function parseDateString(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function formatSessionDateLabel(session: AcademicCalendarSession) {
+  return `${session.actualDate}(${session.actualDay})`;
+}
+
 function formatLocalDateTime(date: Date) {
   const year = String(date.getFullYear()).padStart(4, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -333,6 +376,19 @@ function formatCompactDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}${month}${day}`;
+}
+
+function compareEventLines(left: string[], right: string[]) {
+  const leftStart = left.find((line) => line.startsWith("DTSTART:")) ?? "";
+  const rightStart = right.find((line) => line.startsWith("DTSTART:")) ?? "";
+
+  if (leftStart !== rightStart) {
+    return leftStart.localeCompare(rightStart);
+  }
+
+  const leftSummary = left.find((line) => line.startsWith("SUMMARY:")) ?? "";
+  const rightSummary = right.find((line) => line.startsWith("SUMMARY:")) ?? "";
+  return leftSummary.localeCompare(rightSummary, "ja");
 }
 
 function escapeIcsText(value: string) {

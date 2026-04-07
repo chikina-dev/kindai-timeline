@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarRange, Download } from "lucide-react";
+import { useAcademicCalendarSessions } from "@/hooks/use-timetable";
 import {
   createTimetableIcs,
   getRangeLabel,
@@ -9,7 +10,7 @@ import {
   renderIcsTemplate,
   type IcsRangePreset,
 } from "@/lib/ics";
-import type { Course } from "@/types/timetable";
+import type { Course, Semester } from "@/types/timetable";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,14 +34,18 @@ import { IcsTemplateEditor } from "./ics-template-editor";
 const DEFAULT_TEMPLATE = "{{ title }}";
 
 type IcsDownloadDialogProps = {
+  academicYear: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  semester: Semester;
   timetable: Course[];
 };
 
 export function IcsDownloadDialog({
+  academicYear,
   open,
   onOpenChange,
+  semester,
   timetable,
 }: IcsDownloadDialogProps) {
   const [rangePreset, setRangePreset] = useState<IcsRangePreset>("semester");
@@ -48,20 +53,27 @@ export function IcsDownloadDialog({
   const [calendarName, setCalendarName] = useState("近大時間割");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const now = new Date();
-  const firstCourse = timetable[0];
-  const previewText = firstCourse
-    ? renderIcsTemplate(template || DEFAULT_TEMPLATE, firstCourse)
-    : "";
-
-  const academicYear =
-    timetable.find((course) => Number.isInteger(course.academicYear))
-      ?.academicYear ?? now.getFullYear();
-
   const scheduledCount = timetable.filter(
     (course) => course.day && course.periods?.length
   ).length;
   const unscheduledCount = timetable.length - scheduledCount;
+  const firstCourse = timetable[0];
+  const {
+    data: academicCalendarSessions = [],
+    error: academicCalendarError,
+    isLoading: isAcademicCalendarLoading,
+  } = useAcademicCalendarSessions(
+    {
+      academicYear,
+      semester,
+    },
+    {
+      enabled: open && scheduledCount > 0,
+    }
+  );
+  const previewText = firstCourse
+    ? renderIcsTemplate(template || DEFAULT_TEMPLATE, firstCourse)
+    : "";
 
   const handleDownload = () => {
     const trimmedTemplate = template.trim();
@@ -72,14 +84,20 @@ export function IcsDownloadDialog({
 
     setErrorMessage(null);
 
+    if (academicCalendarSessions.length === 0) {
+      setErrorMessage("選択中の年度・学期の授業日データがありません");
+      return;
+    }
+
     const result = createTimetableIcs(timetable, {
       calendarName,
       rangePreset,
+      sessions: academicCalendarSessions,
       template: trimmedTemplate,
     });
 
     if (result.includedCount === 0) {
-      setErrorMessage("出力できる曜日・時限付きの科目がありません");
+      setErrorMessage("選択した期間に出力できる授業イベントがありません");
       return;
     }
 
@@ -106,7 +124,7 @@ export function IcsDownloadDialog({
             ICSをダウンロード
           </DialogTitle>
           <DialogDescription>
-            期間とカレンダーに表示するテキストを設定して、時間割をICSファイルとして出力します。
+            年間行事予定の授業日データを使って、休講日と振替授業日を反映したICSを出力します。
           </DialogDescription>
         </DialogHeader>
 
@@ -129,7 +147,7 @@ export function IcsDownloadDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                現在の設定: {getRangeLabel(rangePreset, academicYear)}
+                現在の設定: {getRangeLabel(rangePreset, academicYear, semester)}
               </p>
             </div>
 
@@ -165,8 +183,23 @@ export function IcsDownloadDialog({
             <div className="rounded-lg border border-border p-3 space-y-1 text-sm">
               <p>出力対象: {scheduledCount}科目</p>
               <p className="text-muted-foreground">
+                授業日データ: {isAcademicCalendarLoading ? "読み込み中" : `${academicCalendarSessions.length}件`}
+              </p>
+              <p className="text-muted-foreground">
                 曜日や時限が未設定の科目 {unscheduledCount} 件はICSに含まれません。
               </p>
+              {academicCalendarError && (
+                <p className="text-destructive">
+                  授業日データの取得に失敗しました。しばらくしてから再度お試しください。
+                </p>
+              )}
+              {!isAcademicCalendarLoading &&
+                !academicCalendarError &&
+                academicCalendarSessions.length === 0 && (
+                  <p className="text-destructive">
+                    この年度・学期の授業日データが未登録です。先に import script を実行してください。
+                  </p>
+                )}
             </div>
 
             {errorMessage && (
@@ -179,7 +212,14 @@ export function IcsDownloadDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             キャンセル
           </Button>
-          <Button onClick={handleDownload} disabled={scheduledCount === 0}>
+          <Button
+            onClick={handleDownload}
+            disabled={
+              scheduledCount === 0 ||
+              isAcademicCalendarLoading ||
+              academicCalendarSessions.length === 0
+            }
+          >
             <Download className="mr-2 h-4 w-4" />
             ダウンロード
           </Button>

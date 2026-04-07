@@ -50,15 +50,13 @@ async function main() {
     const migrationSql = fs.readFileSync(`drizzle/${entry.tag}.sql`, "utf8");
     const hash = crypto.createHash("sha256").update(migrationSql).digest("hex");
 
-    if (entry.tag === "0003_faithful_hiroim") {
-      const statements = migrationSql
-        .split("--> statement-breakpoint")
-        .map((statement) => statement.trim())
-        .filter(Boolean);
+    const statements = migrationSql
+      .split("--> statement-breakpoint")
+      .map((statement) => statement.trim())
+      .filter(Boolean);
 
-      for (const statement of statements) {
-        await sql.query(statement);
-      }
+    for (const statement of statements) {
+      await sql.query(statement);
     }
 
     await sql.query(

@@ -1,11 +1,13 @@
 import useSWR, { mutate as globalMutate } from "swr";
+import { buildAcademicCalendarApiUrl } from "@/lib/academic-calendar";
 import {
   buildCourseAvailabilityApiUrl,
 } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
 import { buildTimetableApiUrl } from "@/lib/timetable-api";
-import type { Course, Semester } from "@/types/timetable";
+import type { AcademicCalendarSession, Course, Semester } from "@/types/timetable";
 import type {
+  AcademicCalendarSessionFilters,
   CourseAvailabilityCounts,
   CourseAvailabilityQueryFilters,
 } from "@/types/timetable-data";
@@ -20,6 +22,13 @@ const fetcher = async (url: string): Promise<Course[]> => {
 const courseAvailabilityFetcher = async (url: string): Promise<CourseAvailabilityCounts> => {
   const res = await fetch(url);
   return res.json() as Promise<CourseAvailabilityCounts>;
+};
+
+const academicCalendarFetcher = async (
+  url: string
+): Promise<AcademicCalendarSession[]> => {
+  const res = await fetch(url);
+  return res.json() as Promise<AcademicCalendarSession[]>;
 };
 
 type SwrHookOptions = {
@@ -75,6 +84,18 @@ export function useCourseAvailabilityCounts(
   const key = options?.enabled === false ? null : url;
 
   return useSWR<CourseAvailabilityCounts>(key, courseAvailabilityFetcher, {
+    revalidateIfStale: false,
+  });
+}
+
+export function useAcademicCalendarSessions(
+  filters?: AcademicCalendarSessionFilters,
+  options?: SwrHookOptions
+) {
+  const url = buildAcademicCalendarApiUrl("/api/academic-calendar", filters);
+  const key = options?.enabled === false ? null : url;
+
+  return useSWR<AcademicCalendarSession[]>(key, academicCalendarFetcher, {
     revalidateIfStale: false,
   });
 }

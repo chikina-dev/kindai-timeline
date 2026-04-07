@@ -29,6 +29,13 @@
       "when": 1775378457897,
       "tag": "0003_faithful_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775534823229,
+      "tag": "0004_glorious_rockslide",
+      "breakpoints": true
     }
   ]
 }

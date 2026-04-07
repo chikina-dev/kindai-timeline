@@ -171,8 +171,10 @@ export function TimetableSidebarClient({
         </Button>
       </div>
       <IcsDownloadDialog
+        academicYear={selectedAcademicYear}
         open={icsOpen}
         onOpenChange={setIcsOpen}
+        semester={selectedSemester}
         timetable={displayedTimetable}
       />
       <OndemandCourseDialog open={ondemandOpen} onOpenChange={setOndemandOpen} />

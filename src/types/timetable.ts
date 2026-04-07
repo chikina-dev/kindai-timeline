@@ -1,4 +1,9 @@
-export type { Course, NewCourse, UserCourse } from "@/lib/db/schema";
+export type {
+	AcademicCalendarSession,
+	Course,
+	NewCourse,
+	UserCourse,
+} from "@/lib/db/schema";
 export {
 	DAYS,
 	PERIODS,

@@ -1,4 +1,5 @@
 import {
+  date,
   pgTable,
   text,
   timestamp,
@@ -135,11 +136,34 @@ export const userCoursePreferences = pgTable("user_course_preferences", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
 
+export const academicCalendarSessions = pgTable(
+  "academic_calendar_session",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    academicYear: integer("academic_year").notNull(),
+    semester: text("semester").$type<Semester>().notNull(),
+    actualDate: date("actual_date", { mode: "string" }).notNull(),
+    actualDay: text("actual_day").$type<DayOfWeek>().notNull(),
+    effectiveDay: text("effective_day").$type<DayOfWeek>().notNull(),
+    lectureNumber: integer("lecture_number").notNull(),
+    rawLabel: text("raw_label").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  },
+  (table) => ({
+    uniqueAcademicCalendarSessionDate: uniqueIndex(
+      "academic_calendar_session_academic_year_actual_date_unique"
+    ).on(table.academicYear, table.actualDate),
+  })
+);
+
 // ============================================================
 // Inferred types
 // ============================================================
 
 export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
+export type AcademicCalendarSession = typeof academicCalendarSessions.$inferSelect;
+export type NewAcademicCalendarSession =
+  typeof academicCalendarSessions.$inferInsert;
 export type UserCourse = typeof userCourses.$inferSelect;
 export type UserCoursePreferencesRecord = typeof userCoursePreferences.$inferSelect;

@@ -1,5 +1,5 @@
 import type { DayOfWeek } from "@/types/timetable";
-import type { Course, Semester } from "@/types/timetable";
+import type { AcademicCalendarSession, Course, Semester } from "@/types/timetable";
 
 export type AcademicTermFilters = {
   semester?: Semester;
@@ -17,7 +17,12 @@ export type CourseAvailabilityCounts = {
   ondemandCount: number;
 };
 
-export type TimetableSwrFallbackValue = Course[] | CourseAvailabilityCounts;
+export type AcademicCalendarSessionFilters = AcademicTermFilters;
+
+export type TimetableSwrFallbackValue =
+  | Course[]
+  | CourseAvailabilityCounts
+  | AcademicCalendarSession[];
 
 export type TimetableSwrFallback = Record<string, TimetableSwrFallbackValue>;
 

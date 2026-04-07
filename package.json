@@ -14,6 +14,8 @@
     "courses:check": "tsx scripts/check-courses.ts",
     "courses:import": "tsx scripts/import-courses.ts",
     "courses:link-syllabus": "tsx scripts/link-syllabus-ids.ts",
+    "academic-calendar:import": "tsx scripts/import-academic-calendar.ts",
+    "academic-calendar:check": "tsx scripts/import-academic-calendar.ts --dry-run",
     "deploy": "npm run build && opennextjs-cloudflare deploy",
     "upload": "npm run build && opennextjs-cloudflare upload",
     "preview": "npm run build && opennextjs-cloudflare preview",
