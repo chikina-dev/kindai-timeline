@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import type { DayOfWeek, Semester } from "@/types/timetable";
+import type { DayOfWeek, Semester } from "@/types/course-domain";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PDFParse } = require("pdf-parse");
