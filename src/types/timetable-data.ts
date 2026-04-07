@@ -1,3 +1,4 @@
+import type { UserCoursePreferences } from "@/lib/user-course-preferences";
 import type { DayOfWeek } from "@/types/timetable";
 import type { AcademicCalendarSession, Course, Semester } from "@/types/timetable";
 
@@ -19,9 +20,19 @@ export type CourseAvailabilityCounts = {
 
 export type AcademicCalendarSessionFilters = AcademicTermFilters;
 
+export type TimetableSnapshot = {
+  academicYear: number;
+  semester: Semester;
+  timetable: Course[];
+  courseAvailabilityCounts: CourseAvailabilityCounts;
+  userCoursePreferences: UserCoursePreferences;
+  warningMessage?: string;
+};
+
 export type TimetableSwrFallbackValue =
   | Course[]
   | CourseAvailabilityCounts
+  | TimetableSnapshot
   | AcademicCalendarSession[];
 
 export type TimetableSwrFallback = Record<string, TimetableSwrFallbackValue>;
@@ -30,8 +41,7 @@ export type TimetablePageInitialData = {
   initialAcademicYear: number;
   availableAcademicYears: number[];
   initialSemester: Semester;
-  initialTimetable: Course[];
-  initialCourseAvailabilityCounts: CourseAvailabilityCounts;
+  initialSnapshot: TimetableSnapshot;
   warningMessage?: string;
   swrFallback: TimetableSwrFallback;
 };

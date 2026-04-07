@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { TimetablePage } from "@/components/timetable/timetable-page";
 import { TimeTableProvider } from "@/components/timetable/timetable-provider";
 import { getTimeTablePageInitialData } from "@/server/timetable-page-data";
-import { getUserCoursePreferences } from "@/server/user-course-preferences";
 
 export default async function HomePage({
   searchParams,
@@ -24,19 +23,13 @@ export default async function HomePage({
     initialAcademicYear,
     availableAcademicYears,
     initialSemester,
-    initialTimetable,
-    initialCourseAvailabilityCounts,
-    warningMessage,
     swrFallback,
   } = await getTimeTablePageInitialData({
     userId: session.user.id,
+    fallbackEmail: session.user.email ?? null,
     requestedAcademicYear: academicYear,
     requestedSemester: semester,
   });
-  const initialUserCoursePreferences = await getUserCoursePreferences(
-    session.user.id,
-    session.user.email ?? null
-  );
 
   return (
     <TimeTableProvider
@@ -44,16 +37,8 @@ export default async function HomePage({
       initialAcademicYear={initialAcademicYear}
       availableAcademicYears={availableAcademicYears}
       initialSemester={initialSemester}
-      warningMessage={warningMessage}
-      initialUserCoursePreferences={initialUserCoursePreferences}
     >
-      <TimetablePage
-        session={session}
-        initialAcademicYear={initialAcademicYear}
-        initialSemester={initialSemester}
-        initialTimetable={initialTimetable}
-        initialCourseAvailabilityCounts={initialCourseAvailabilityCounts}
-      />
+      <TimetablePage session={session} />
     </TimeTableProvider>
   );
 }

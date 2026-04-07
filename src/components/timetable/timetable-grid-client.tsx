@@ -1,51 +1,20 @@
 "use client";
 
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
-import { useUserTimetable } from "@/hooks/use-timetable";
-import { getCourseCountForSlot } from "@/lib/course-availability";
-import {
-  findCourseByPosition,
-  isInitialTimetableSelection,
-  PERIOD_TIMES,
-} from "@/lib/timetable";
-import { DAYS, PERIODS, type Course, type DayOfWeek, type Semester } from "@/types/timetable";
+import { PERIOD_TIMES } from "@/lib/timetable";
+import { DAYS, PERIODS, type DayOfWeek } from "@/types/timetable";
 import { TimetableCell } from "./timetable-cell";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
-import type { CourseAvailabilityCounts } from "@/types/timetable-data";
 
-type TimetableGridClientProps = {
-  initialAcademicYear: number;
-  initialSemester: Semester;
-  initialTimetable: Course[];
-  initialCourseAvailabilityCounts: CourseAvailabilityCounts;
-};
-
-export function TimetableGridClient({
-  initialAcademicYear,
-  initialSemester,
-  initialTimetable,
-  initialCourseAvailabilityCounts,
-}: TimetableGridClientProps) {
+export function TimetableGridClient() {
   const {
-    selectedAcademicYear,
-    selectedSemester,
     getAvailableCourseCount,
+    getCourseByPosition,
+    isTimetableLoading,
+    timetable,
   } = useSharedCourseFilters();
-  const { timetable, getCourseByPosition, isLoading } = useUserTimetable({
-    academicYear: selectedAcademicYear,
-    semester: selectedSemester,
-  });
-
-  const isInitialSelection = isInitialTimetableSelection(
-    selectedAcademicYear,
-    selectedSemester,
-    initialAcademicYear,
-    initialSemester
-  );
-  const displayedTimetable =
-    isInitialSelection && timetable.length === 0 ? initialTimetable : timetable;
-  const shouldShowLoading = isLoading && displayedTimetable.length === 0;
+  const shouldShowLoading = isTimetableLoading && timetable.length === 0;
 
   if (shouldShowLoading) {
     return (
@@ -94,16 +63,8 @@ export function TimetableGridClient({
 
               {DAYS.map((day) => {
                 const typedDay = day as DayOfWeek;
-                const course = isInitialSelection
-                  ? findCourseByPosition(displayedTimetable, day, period)
-                  : getCourseByPosition(day, period);
-                const availableCourseCount = isInitialSelection
-                  ? getCourseCountForSlot(
-                      initialCourseAvailabilityCounts,
-                      typedDay,
-                      period
-                    )
-                  : getAvailableCourseCount(typedDay, period);
+                const course = getCourseByPosition(typedDay, period);
+                const availableCourseCount = getAvailableCourseCount(typedDay, period);
 
                 return (
                   <TimetableCell

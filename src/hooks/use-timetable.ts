@@ -1,18 +1,21 @@
-import useSWR, { mutate as globalMutate } from "swr";
+import useSWR from "swr";
 import { buildAcademicCalendarApiUrl } from "@/lib/academic-calendar";
 import {
   buildCourseAvailabilityApiUrl,
 } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
-import { buildTimetableApiUrl } from "@/lib/timetable-api";
+import {
+  buildTimetablePageDataApiUrl,
+  TIMETABLE_PAGE_DATA_ENDPOINT,
+} from "@/lib/timetable-api";
 import type { AcademicCalendarSession, Course, Semester } from "@/types/timetable";
 import type {
   AcademicCalendarSessionFilters,
   CourseAvailabilityCounts,
   CourseAvailabilityQueryFilters,
+  TimetableQueryFilters,
+  TimetableSnapshot,
 } from "@/types/timetable-data";
-
-const TIMETABLE_ENDPOINT = "/api/timetable";
 
 const fetcher = async (url: string): Promise<Course[]> => {
   const res = await fetch(url);
@@ -29,6 +32,13 @@ const academicCalendarFetcher = async (
 ): Promise<AcademicCalendarSession[]> => {
   const res = await fetch(url);
   return res.json() as Promise<AcademicCalendarSession[]>;
+};
+
+const timetableSnapshotFetcher = async (
+  url: string
+): Promise<TimetableSnapshot> => {
+  const res = await fetch(url);
+  return res.json() as Promise<TimetableSnapshot>;
 };
 
 type SwrHookOptions = {
@@ -88,6 +98,18 @@ export function useCourseAvailabilityCounts(
   });
 }
 
+export function useTimetableSnapshot(
+  filters?: TimetableQueryFilters,
+  options?: SwrHookOptions
+) {
+  const url = buildTimetablePageDataApiUrl(TIMETABLE_PAGE_DATA_ENDPOINT, filters);
+  const key = options?.enabled === false ? null : url;
+
+  return useSWR<TimetableSnapshot>(key, timetableSnapshotFetcher, {
+    revalidateIfStale: false,
+  });
+}
+
 export function useAcademicCalendarSessions(
   filters?: AcademicCalendarSessionFilters,
   options?: SwrHookOptions
@@ -98,111 +120,4 @@ export function useAcademicCalendarSessions(
   return useSWR<AcademicCalendarSession[]>(key, academicCalendarFetcher, {
     revalidateIfStale: false,
   });
-}
-
-export function useUserTimetable(
-  filters?: Pick<CourseQueryFilters, "semester" | "academicYear">,
-  options?: SwrHookOptions
-) {
-  const url = buildTimetableApiUrl(TIMETABLE_ENDPOINT, filters);
-  const key = options?.enabled === false ? null : url;
-  const { data, error, isLoading, mutate } = useSWR<Course[]>(key, fetcher, {
-    revalidateIfStale: false,
-  });
-
-  const courseMatchesKey = (course: Course, key: string) => {
-    const parsed = new URL(key, "http://localhost");
-    const semester = parsed.searchParams.get("semester");
-    const academicYear = parsed.searchParams.get("academicYear");
-
-    if (semester && semester !== toSemesterQueryValue(course.semester)) {
-      return false;
-    }
-
-    if (academicYear && academicYear !== String(course.academicYear)) {
-      return false;
-    }
-
-    return true;
-  };
-
-  const revalidateOtherTimetableCaches = async () => {
-    await globalMutate(
-      (key) =>
-        typeof key === "string" && key.startsWith(TIMETABLE_ENDPOINT) && key !== url,
-      undefined,
-      { revalidate: true }
-    );
-  };
-
-  const addCourse = async (course: Course) => {
-    try {
-      const res = await fetch(TIMETABLE_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId: course.id }),
-      });
-      if (!res.ok) throw new Error("Failed to add course");
-      if (courseMatchesKey(course, url)) {
-        await mutate((current) => {
-          if (!current) {
-            return [course];
-          }
-
-          if (current.some((item) => item.id === course.id)) {
-            return current;
-          }
-
-          return [...current, course];
-        }, { revalidate: false });
-      }
-      await revalidateOtherTimetableCaches();
-      return true;
-    } catch (error) {
-      console.error("Error adding course:", error);
-      return false;
-    }
-  };
-
-  const removeCourse = async (courseId: string) => {
-    try {
-      const res = await fetch(TIMETABLE_ENDPOINT, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId }),
-      });
-      if (!res.ok) throw new Error("Failed to remove course");
-      await mutate((current) => current?.filter((course) => course.id !== courseId) ?? current, {
-        revalidate: false,
-      });
-      await revalidateOtherTimetableCaches();
-      return true;
-    } catch (error) {
-      console.error("Error removing course:", error);
-      return false;
-    }
-  };
-
-  const getCourseByPosition = (
-    day: string,
-    period: number
-  ): Course | undefined => {
-    return data?.find(
-      (course) => course.day === day && course.periods?.includes(period)
-    );
-  };
-
-  const totalCredits =
-    data?.reduce((sum, course) => sum + course.credits, 0) || 0;
-
-  return {
-    timetable: data || [],
-    isLoading,
-    error,
-    addCourse,
-    removeCourse,
-    getCourseByPosition,
-    totalCredits,
-    mutate,
-  };
 }

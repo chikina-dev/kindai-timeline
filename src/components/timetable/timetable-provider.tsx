@@ -1,19 +1,10 @@
 "use client";
 
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-} from "react";
+import { type ReactNode } from "react";
 import { SWRConfig } from "swr";
 import { CourseFilterProvider } from "@/components/timetable/course-filter-provider";
-import type { UserCoursePreferences } from "@/lib/user-course-preferences";
 import type { Semester } from "@/types/timetable";
 import type { TimetableSwrFallback } from "@/types/timetable-data";
-
-type TimeTableContextValue = {
-  warningMessage?: string;
-};
 
 type TimeTableProviderProps = {
   children: ReactNode;
@@ -21,11 +12,7 @@ type TimeTableProviderProps = {
   initialAcademicYear: number;
   availableAcademicYears: number[];
   initialSemester: Semester;
-  warningMessage?: string;
-  initialUserCoursePreferences: UserCoursePreferences;
 };
-
-const TimeTableContext = createContext<TimeTableContextValue | null>(null);
 
 export function TimeTableProvider({
   children,
@@ -33,31 +20,16 @@ export function TimeTableProvider({
   initialAcademicYear,
   availableAcademicYears,
   initialSemester,
-  warningMessage,
-  initialUserCoursePreferences,
 }: TimeTableProviderProps) {
   return (
     <SWRConfig value={{ fallback }}>
-      <TimeTableContext.Provider value={{ warningMessage }}>
-        <CourseFilterProvider
-          initialAcademicYear={initialAcademicYear}
-          availableAcademicYears={availableAcademicYears}
-          initialSemester={initialSemester}
-          initialUserCoursePreferences={initialUserCoursePreferences}
-        >
-          {children}
-        </CourseFilterProvider>
-      </TimeTableContext.Provider>
+      <CourseFilterProvider
+        initialAcademicYear={initialAcademicYear}
+        availableAcademicYears={availableAcademicYears}
+        initialSemester={initialSemester}
+      >
+        {children}
+      </CourseFilterProvider>
     </SWRConfig>
   );
-}
-
-export function useTimeTableContext() {
-  const context = useContext(TimeTableContext);
-
-  if (!context) {
-    throw new Error("useTimeTableContext must be used within TimeTableProvider");
-  }
-
-  return context;
 }

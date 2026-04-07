@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useCourses, useUserTimetable } from "@/hooks/use-timetable";
+import { useCourses } from "@/hooks/use-timetable";
 import { type Course, CATEGORIES } from "@/types/timetable";
 import { Check, BookOpen, User, MapPin, GraduationCap, ChevronDown } from "lucide-react";
 import {
@@ -60,16 +60,12 @@ export function OndemandCourseDialog({
     setSelectedClasses,
     ondemandCourseCount,
     resetSharedFilters,
+    addCourse,
+    timetable,
   } = useSharedCourseFilters();
   const hasOndemandCourses = ondemandCourseCount > 0;
   const { data: courses, isLoading } = useCourses({
     ondemand: true,
-    academicYear: selectedAcademicYear,
-    semester: selectedSemester,
-  }, {
-    enabled: open && hasOndemandCourses,
-  });
-  const { addCourse, timetable } = useUserTimetable({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   }, {

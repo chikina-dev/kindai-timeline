@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
-import { useUserTimetable } from "@/hooks/use-timetable";
-import { isInitialTimetableSelection, sortTimetableCourses } from "@/lib/timetable";
+import { sortTimetableCourses } from "@/lib/timetable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,13 +13,7 @@ import { OndemandCourseDialog } from "./ondemand-course-dialog";
 import { IcsDownloadDialog } from "./ics-download-dialog";
 import { CourseRequirementBadge } from "./course-requirement-badge";
 import { CourseSyllabusLink } from "./course-syllabus-link";
-import type { Course, Semester } from "@/types/timetable";
 
-type TimetableSidebarClientProps = {
-  initialAcademicYear: number;
-  initialSemester: Semester;
-  initialTimetable: Course[];
-};
 
 const categoryColors: Record<string, string> = {
   共通教養: "bg-[oklch(0.7_0.15_200)]",
@@ -28,33 +21,19 @@ const categoryColors: Record<string, string> = {
   専門: "bg-[oklch(0.65_0.18_145)]",
 };
 
-export function TimetableSidebarClient({
-  initialAcademicYear,
-  initialSemester,
-  initialTimetable,
-}: TimetableSidebarClientProps) {
+export function TimetableSidebarClient() {
   const [ondemandOpen, setOndemandOpen] = useState(false);
   const [icsOpen, setIcsOpen] = useState(false);
-  const { selectedAcademicYear, selectedSemester } = useSharedCourseFilters();
-  const { timetable, isLoading, removeCourse, totalCredits } = useUserTimetable({
-    academicYear: selectedAcademicYear,
-    semester: selectedSemester,
-  });
-
-  const isInitialSelection = isInitialTimetableSelection(
+  const {
     selectedAcademicYear,
     selectedSemester,
-    initialAcademicYear,
-    initialSemester
-  );
-  const displayedTimetable =
-    isInitialSelection && timetable.length === 0 ? initialTimetable : timetable;
-  const shouldShowLoading = isLoading && displayedTimetable.length === 0;
-  const sortedTimetable = sortTimetableCourses(displayedTimetable);
-  const displayedTotalCredits =
-    isInitialSelection && timetable.length === 0
-      ? initialTimetable.reduce((sum, course) => sum + course.credits, 0)
-      : totalCredits;
+    timetable,
+    isTimetableLoading,
+    removeCourse,
+    totalCredits,
+  } = useSharedCourseFilters();
+  const shouldShowLoading = isTimetableLoading && timetable.length === 0;
+  const sortedTimetable = sortTimetableCourses(timetable);
 
   const handleRemove = async (courseId: string) => {
     await removeCourse(courseId);
@@ -66,7 +45,7 @@ export function TimetableSidebarClient({
         <CardTitle className="flex items-center justify-between gap-3">
           <span className="text-base sm:text-lg">登録科目</span>
           <Badge variant="outline" className="text-[11px] sm:text-xs">
-            {displayedTotalCredits}単位
+            {totalCredits}単位
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -75,7 +54,7 @@ export function TimetableSidebarClient({
           <div className="flex items-center justify-center py-12">
             <Spinner className="h-6 w-6" />
           </div>
-        ) : displayedTimetable.length === 0 ? (
+        ) : timetable.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <BookOpen className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
@@ -164,7 +143,7 @@ export function TimetableSidebarClient({
           variant="outline"
           className="h-9 w-full text-xs sm:h-10 sm:text-sm"
           onClick={() => setIcsOpen(true)}
-          disabled={displayedTimetable.length === 0}
+          disabled={timetable.length === 0}
         >
           <Download className="mr-2 h-4 w-4" />
           ICSをダウンロード
@@ -175,7 +154,7 @@ export function TimetableSidebarClient({
         open={icsOpen}
         onOpenChange={setIcsOpen}
         semester={selectedSemester}
-        timetable={displayedTimetable}
+        timetable={timetable}
       />
       <OndemandCourseDialog open={ondemandOpen} onOpenChange={setOndemandOpen} />
     </Card>

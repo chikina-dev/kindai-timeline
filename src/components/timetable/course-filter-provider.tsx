@@ -7,22 +7,27 @@ import {
   useEffect,
   useContext,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { mutate as globalMutate } from "swr";
 import { getCourseCountForSlot } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
 import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
 import {
+  TIMETABLE_ENDPOINT,
+  TIMETABLE_PAGE_DATA_ENDPOINT,
+  buildTimetablePageDataApiUrl,
+} from "@/lib/timetable-api";
+import {
+  createDefaultUserCoursePreferences,
   resolveUserCourseProfile,
   type ResolvedUserCourseProfile,
   type UserCoursePreferences,
 } from "@/lib/user-course-preferences";
-import { useCourseAvailabilityCounts } from "@/hooks/use-timetable";
-import type { Semester } from "@/types/timetable";
-import type { DayOfWeek } from "@/types/timetable";
-import type { CourseAvailabilityCounts } from "@/types/timetable-data";
+import { useTimetableSnapshot } from "@/hooks/use-timetable";
+import type { Course, DayOfWeek, Semester } from "@/types/timetable";
+import type { CourseAvailabilityCounts, TimetableSnapshot } from "@/types/timetable-data";
 
 function areNumberArraysEqual(left: number[], right: number[]) {
   return (
@@ -38,20 +43,6 @@ function areStringArraysEqual(left: string[], right: string[]) {
   );
 }
 
-function areUserCoursePreferencesEqual(
-  left: UserCoursePreferences,
-  right: UserCoursePreferences
-) {
-  return (
-    left.studentEmail === right.studentEmail &&
-    left.gradeMode === right.gradeMode &&
-    left.manualGrade === right.manualGrade &&
-    left.classMode === right.classMode &&
-    left.manualClass === right.manualClass &&
-    left.selectedCourse === right.selectedCourse
-  );
-}
-
 type SharedCourseFilterContextValue = {
   selectedAcademicYear: number;
   setSelectedAcademicYear: (value: number) => void;
@@ -64,6 +55,13 @@ type SharedCourseFilterContextValue = {
   setSelectedGrades: (values: number[]) => void;
   selectedClasses: string[];
   setSelectedClasses: (values: string[]) => void;
+  warningMessage?: string;
+  timetable: Course[];
+  isTimetableLoading: boolean;
+  addCourse: (course: Course) => Promise<boolean>;
+  removeCourse: (courseId: string) => Promise<boolean>;
+  getCourseByPosition: (day: DayOfWeek, period: number) => Course | undefined;
+  totalCredits: number;
   courseAvailabilityCounts?: CourseAvailabilityCounts;
   getAvailableCourseCount: (day: DayOfWeek, period: number) => number;
   ondemandCourseCount: number;
@@ -83,7 +81,6 @@ type CourseFilterProviderProps = {
   initialAcademicYear: number;
   availableAcademicYears: number[];
   initialSemester: Semester;
-  initialUserCoursePreferences: UserCoursePreferences;
 };
 
 const SharedCourseFilterContext =
@@ -94,7 +91,6 @@ export function CourseFilterProvider({
   initialAcademicYear,
   availableAcademicYears,
   initialSemester,
-  initialUserCoursePreferences,
 }: CourseFilterProviderProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -106,18 +102,28 @@ export function CourseFilterProvider({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
   const [selectedClasses, setSelectedClassesState] = useState<string[]>([]);
-  const [userCoursePreferences, setUserCoursePreferences] =
-    useState<UserCoursePreferences>(initialUserCoursePreferences);
-  const previousInitialUserCoursePreferences = useRef(initialUserCoursePreferences);
   const [autoAppliedGrades, setAutoAppliedGrades] = useState<number[]>([]);
   const [autoAppliedClasses, setAutoAppliedClasses] = useState<string[]>([]);
   const {
-    data: courseAvailabilityCounts,
-    isLoading: isCourseAvailabilityLoading,
-  } = useCourseAvailabilityCounts({
+    data: timetableSnapshot,
+    isLoading: isTimetableLoading,
+    mutate: mutateTimetableSnapshot,
+  } = useTimetableSnapshot({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   });
+  const snapshotUrl = buildTimetablePageDataApiUrl(TIMETABLE_PAGE_DATA_ENDPOINT, {
+    academicYear: selectedAcademicYear,
+    semester: selectedSemester,
+  });
+  const userCoursePreferences =
+    timetableSnapshot?.userCoursePreferences ??
+    createDefaultUserCoursePreferences();
+  const courseAvailabilityCounts = timetableSnapshot?.courseAvailabilityCounts;
+  const timetable = useMemo(
+    () => timetableSnapshot?.timetable ?? [],
+    [timetableSnapshot?.timetable]
+  );
 
   const setSelectedClasses = useCallback((values: string[]) => {
     setSelectedClassesState(normalizeSelectedCourseClasses(values));
@@ -125,6 +131,108 @@ export function CourseFilterProvider({
   const resolvedUserCourseProfile = useMemo(
     () => resolveUserCourseProfile(userCoursePreferences, selectedAcademicYear),
     [selectedAcademicYear, userCoursePreferences]
+  );
+
+  const revalidateOtherSnapshotCaches = useCallback(async () => {
+    await globalMutate(
+      (key) =>
+        typeof key === "string" &&
+        key.startsWith(TIMETABLE_PAGE_DATA_ENDPOINT) &&
+        key !== snapshotUrl,
+      undefined,
+      { revalidate: true }
+    );
+  }, [snapshotUrl]);
+
+  const addCourse = useCallback(
+    async (course: Course) => {
+      try {
+        const response = await fetch(TIMETABLE_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId: course.id }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to add course");
+        }
+
+        await mutateTimetableSnapshot(
+          (current) => {
+            if (!current) {
+              return current;
+            }
+
+            if (current.timetable.some((item) => item.id === course.id)) {
+              return current;
+            }
+
+            return {
+              ...current,
+              timetable: [...current.timetable, course],
+            } satisfies TimetableSnapshot;
+          },
+          { revalidate: false }
+        );
+
+        await revalidateOtherSnapshotCaches();
+        return true;
+      } catch (error) {
+        console.error("Error adding course:", error);
+        return false;
+      }
+    },
+    [mutateTimetableSnapshot, revalidateOtherSnapshotCaches]
+  );
+
+  const removeCourse = useCallback(
+    async (courseId: string) => {
+      try {
+        const response = await fetch(TIMETABLE_ENDPOINT, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to remove course");
+        }
+
+        await mutateTimetableSnapshot(
+          (current) => {
+            if (!current) {
+              return current;
+            }
+
+            return {
+              ...current,
+              timetable: current.timetable.filter((course) => course.id !== courseId),
+            } satisfies TimetableSnapshot;
+          },
+          { revalidate: false }
+        );
+
+        await revalidateOtherSnapshotCaches();
+        return true;
+      } catch (error) {
+        console.error("Error removing course:", error);
+        return false;
+      }
+    },
+    [mutateTimetableSnapshot, revalidateOtherSnapshotCaches]
+  );
+
+  const getCourseByPosition = useCallback(
+    (day: DayOfWeek, period: number) =>
+      timetable.find(
+        (course) => course.day === day && course.periods?.includes(period)
+      ),
+    [timetable]
+  );
+
+  const totalCredits = useMemo(
+    () => timetable.reduce((sum, course) => sum + course.credits, 0),
+    [timetable]
   );
 
   const applyProfileFilters = useCallback(() => {
@@ -158,7 +266,20 @@ export function CourseFilterProvider({
         }
 
         const nextPreferences = (await response.json()) as UserCoursePreferences;
-        setUserCoursePreferences(nextPreferences);
+        await mutateTimetableSnapshot(
+          (current) => {
+            if (!current) {
+              return current;
+            }
+
+            return {
+              ...current,
+              userCoursePreferences: nextPreferences,
+            } satisfies TimetableSnapshot;
+          },
+          { revalidate: false }
+        );
+        await revalidateOtherSnapshotCaches();
 
         if (options?.applyToFilters) {
           const nextProfile = resolveUserCourseProfile(
@@ -179,7 +300,7 @@ export function CourseFilterProvider({
 
       return savePreferences();
     },
-    [selectedAcademicYear]
+    [mutateTimetableSnapshot, revalidateOtherSnapshotCaches, selectedAcademicYear]
   );
 
   const getAvailableCourseCount = useCallback(
@@ -187,22 +308,6 @@ export function CourseFilterProvider({
       getCourseCountForSlot(courseAvailabilityCounts, day, period),
     [courseAvailabilityCounts]
   );
-
-  useEffect(() => {
-    if (
-      areUserCoursePreferencesEqual(
-        previousInitialUserCoursePreferences.current,
-        initialUserCoursePreferences
-      )
-    ) {
-      return;
-    }
-
-    previousInitialUserCoursePreferences.current = initialUserCoursePreferences;
-    setUserCoursePreferences(initialUserCoursePreferences);
-    setAutoAppliedGrades([]);
-    setAutoAppliedClasses([]);
-  }, [initialUserCoursePreferences]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -266,6 +371,10 @@ export function CourseFilterProvider({
       selectedAcademicYear,
       setSelectedAcademicYear,
       availableAcademicYears,
+      addCourse,
+      getCourseByPosition,
+      isTimetableLoading,
+      removeCourse,
       selectedSemester,
       setSelectedSemester,
       searchTerm,
@@ -274,10 +383,13 @@ export function CourseFilterProvider({
       setSelectedGrades,
       selectedClasses,
       setSelectedClasses,
+      isCourseAvailabilityLoading: isTimetableLoading,
       courseAvailabilityCounts,
       getAvailableCourseCount,
       ondemandCourseCount: courseAvailabilityCounts?.ondemandCount ?? 0,
-      isCourseAvailabilityLoading,
+      timetable,
+      totalCredits,
+      warningMessage: timetableSnapshot?.warningMessage,
       resetSharedFilters: () => {
         setSearchTerm("");
         setSelectedGrades([]);
@@ -289,17 +401,23 @@ export function CourseFilterProvider({
       applyProfileFilters,
     }),
     [
-      availableAcademicYears,
+      getCourseByPosition,
       applyProfileFilters,
+      availableAcademicYears,
+      isTimetableLoading,
+      removeCourse,
       searchTerm,
       selectedAcademicYear,
+      timetable,
+      timetableSnapshot?.warningMessage,
+      totalCredits,
+      addCourse,
       selectedClasses,
       selectedGrades,
       selectedSemester,
       setSelectedClasses,
       courseAvailabilityCounts,
       getAvailableCourseCount,
-      isCourseAvailabilityLoading,
       resolvedUserCourseProfile,
       saveUserCoursePreferences,
       userCoursePreferences,

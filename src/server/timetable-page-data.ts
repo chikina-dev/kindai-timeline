@@ -10,13 +10,18 @@ import {
 import { buildCourseAvailabilityApiUrl } from "@/lib/course-availability";
 import { db } from "@/lib/db";
 import { courses } from "@/lib/db/schema";
-import { buildTimetableApiUrl } from "@/lib/timetable-api";
+import {
+  buildTimetablePageDataApiUrl,
+  buildTimetableApiUrl,
+} from "@/lib/timetable-api";
+import { getUserCoursePreferences } from "@/server/user-course-preferences";
 import { getCourseAvailabilityCounts } from "@/server/course-availability";
 import { getUserTimetable } from "@/server/timetable";
 import type { Course, Semester } from "@/types/timetable";
 import type {
   CourseAvailabilityCounts,
   TimetablePageInitialData,
+  TimetableSnapshot,
   TimetableSwrFallback,
 } from "@/types/timetable-data";
 
@@ -87,26 +92,49 @@ async function loadInitialTimetableData(
   }
 }
 
+export async function getTimetableSnapshot(input: {
+  userId: string;
+  academicYear: number;
+  semester: Semester;
+  fallbackEmail?: string | null;
+}): Promise<TimetableSnapshot> {
+  const [snapshotData, userCoursePreferences] = await Promise.all([
+    loadInitialTimetableData(input.userId, input.academicYear, input.semester),
+    getUserCoursePreferences(input.userId, input.fallbackEmail),
+  ]);
+
+  return {
+    academicYear: input.academicYear,
+    semester: input.semester,
+    timetable: snapshotData.initialTimetable,
+    courseAvailabilityCounts: snapshotData.initialCourseAvailabilityCounts,
+    userCoursePreferences,
+    warningMessage: snapshotData.warningMessage,
+  };
+}
+
 function buildTimetableSwrFallback(
-  initialAcademicYear: number,
-  initialSemester: Semester,
-  initialTimetable: Course[],
-  initialCourseAvailabilityCounts: CourseAvailabilityCounts
+  initialSnapshot: TimetableSnapshot
 ): TimetableSwrFallback {
   return {
+    [buildTimetablePageDataApiUrl("/api/page-data", {
+      academicYear: initialSnapshot.academicYear,
+      semester: initialSnapshot.semester,
+    })]: initialSnapshot,
     [buildTimetableApiUrl("/api/timetable", {
-      academicYear: initialAcademicYear,
-      semester: initialSemester,
-    })]: initialTimetable,
+      academicYear: initialSnapshot.academicYear,
+      semester: initialSnapshot.semester,
+    })]: initialSnapshot.timetable,
     [buildCourseAvailabilityApiUrl("/api/courses/counts", {
-      academicYear: initialAcademicYear,
-      semester: initialSemester,
-    })]: initialCourseAvailabilityCounts,
+      academicYear: initialSnapshot.academicYear,
+      semester: initialSnapshot.semester,
+    })]: initialSnapshot.courseAvailabilityCounts,
   };
 }
 
 export async function getTimeTablePageInitialData(input: {
   userId: string;
+  fallbackEmail?: string | null;
   requestedAcademicYear?: string;
   requestedSemester?: string;
 }): Promise<TimetablePageInitialData> {
@@ -124,29 +152,20 @@ export async function getTimeTablePageInitialData(input: {
     input.requestedSemester,
     inferSemester(new Date())
   );
-  const {
-    initialTimetable,
-    initialCourseAvailabilityCounts,
-    warningMessage: initialDataWarningMessage,
-  } = await loadInitialTimetableData(
-    input.userId,
-    initialAcademicYear,
-    initialSemester
-  );
+  const initialSnapshot = await getTimetableSnapshot({
+    userId: input.userId,
+    academicYear: initialAcademicYear,
+    semester: initialSemester,
+    fallbackEmail: input.fallbackEmail,
+  });
 
   return {
     initialAcademicYear,
     availableAcademicYears,
     initialSemester,
-    initialTimetable,
-    initialCourseAvailabilityCounts,
+    initialSnapshot,
     warningMessage:
-      academicYearsWarningMessage ?? initialDataWarningMessage,
-    swrFallback: buildTimetableSwrFallback(
-      initialAcademicYear,
-      initialSemester,
-      initialTimetable,
-      initialCourseAvailabilityCounts
-    ),
+      academicYearsWarningMessage ?? initialSnapshot.warningMessage,
+    swrFallback: buildTimetableSwrFallback(initialSnapshot),
   };
 }

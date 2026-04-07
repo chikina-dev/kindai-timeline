@@ -1,11 +1,11 @@
 "use client";
 
-import { useTimeTableContext } from "@/components/timetable/timetable-provider";
+import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export function TimetableWarning() {
-  const { warningMessage } = useTimeTableContext();
+  const { warningMessage } = useSharedCourseFilters();
 
   if (!warningMessage) {
     return null;

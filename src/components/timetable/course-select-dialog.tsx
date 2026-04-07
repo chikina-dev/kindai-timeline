@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useCourses, useUserTimetable } from "@/hooks/use-timetable";
+import { useCourses } from "@/hooks/use-timetable";
 import { type Course, type DayOfWeek, CATEGORIES } from "@/types/timetable";
 import { Check, Trash2, BookOpen, User, MapPin, GraduationCap, ChevronDown } from "lucide-react";
 import {
@@ -68,6 +68,9 @@ export function CourseSelectDialog({
     selectedClasses,
     setSelectedClasses,
     resetSharedFilters,
+    addCourse,
+    removeCourse,
+    timetable,
   } = useSharedCourseFilters();
   const hasAvailableCourses = availableCourseCount > 0;
   const { data: courses, isLoading } = useCourses({
@@ -77,12 +80,6 @@ export function CourseSelectDialog({
     semester: selectedSemester,
   }, {
     enabled: open && hasAvailableCourses,
-  });
-  const { addCourse, removeCourse, timetable } = useUserTimetable({
-    academicYear: selectedAcademicYear,
-    semester: selectedSemester,
-  }, {
-    enabled: open && (hasAvailableCourses || Boolean(selectedCourse)),
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 

@@ -1,26 +1,14 @@
 import type { Session } from "next-auth";
-import type { Course, Semester } from "@/types/timetable";
 import { TimetableGrid } from "@/components/timetable/timetable-grid";
 import { TimetableHeader } from "@/components/timetable/timetable-header";
 import { TimetableSidebar } from "@/components/timetable/timetable-sidebar";
 import { TimetableWarning } from "@/components/timetable/timetable-warning";
-import type { CourseAvailabilityCounts } from "@/types/timetable-data";
 
 type TimetablePageProps = {
   session: Session;
-  initialAcademicYear: number;
-  initialSemester: Semester;
-  initialTimetable: Course[];
-  initialCourseAvailabilityCounts: CourseAvailabilityCounts;
 };
 
-export function TimetablePage({
-  session,
-  initialAcademicYear,
-  initialSemester,
-  initialTimetable,
-  initialCourseAvailabilityCounts,
-}: TimetablePageProps) {
+export function TimetablePage({ session }: TimetablePageProps) {
   return (
     <div className="min-h-screen bg-background">
       <TimetableHeader session={session} />
@@ -28,19 +16,10 @@ export function TimetablePage({
         <TimetableWarning />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,21rem)] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_23rem]">
           <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
-            <TimetableGrid
-              initialAcademicYear={initialAcademicYear}
-              initialSemester={initialSemester}
-              initialTimetable={initialTimetable}
-              initialCourseAvailabilityCounts={initialCourseAvailabilityCounts}
-            />
+            <TimetableGrid />
           </div>
           <aside className="min-w-0 w-full max-w-none justify-self-stretch space-y-4 xl:sticky xl:top-24 xl:self-start xl:max-w-84 2xl:max-w-92">
-            <TimetableSidebar
-              initialAcademicYear={initialAcademicYear}
-              initialSemester={initialSemester}
-              initialTimetable={initialTimetable}
-            />
+            <TimetableSidebar />
           </aside>
         </div>
       </main>

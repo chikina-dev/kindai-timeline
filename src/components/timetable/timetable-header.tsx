@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
 import { ProfileMenu } from "@/components/timetable/profile-menu";
-import { useUserTimetable } from "@/hooks/use-timetable";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -28,11 +27,9 @@ export function TimetableHeader({ session }: TimetableHeaderProps) {
     availableAcademicYears,
     selectedSemester,
     setSelectedSemester,
+    timetable,
+    totalCredits,
   } = useSharedCourseFilters();
-  const { totalCredits, timetable } = useUserTimetable({
-    academicYear: selectedAcademicYear,
-    semester: selectedSemester,
-  });
 
   useEffect(() => {
     setHasMounted(true);
