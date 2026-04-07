@@ -35,7 +35,7 @@ export function TimetablePage({
               initialCourseAvailabilityCounts={initialCourseAvailabilityCounts}
             />
           </div>
-          <aside className="min-w-0 w-full max-w-none justify-self-stretch space-y-4 xl:sticky xl:top-24 xl:self-start xl:max-w-[21rem] 2xl:max-w-[23rem]">
+          <aside className="min-w-0 w-full max-w-none justify-self-stretch space-y-4 xl:sticky xl:top-24 xl:self-start xl:max-w-84 2xl:max-w-92">
             <TimetableSidebar
               initialAcademicYear={initialAcademicYear}
               initialSemester={initialSemester}
