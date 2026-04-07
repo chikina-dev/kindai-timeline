@@ -7,6 +7,7 @@ import {
   useEffect,
   useContext,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -34,6 +35,20 @@ function areStringArraysEqual(left: string[], right: string[]) {
   return (
     left.length === right.length &&
     left.every((value, index) => value === right[index])
+  );
+}
+
+function areUserCoursePreferencesEqual(
+  left: UserCoursePreferences,
+  right: UserCoursePreferences
+) {
+  return (
+    left.studentEmail === right.studentEmail &&
+    left.gradeMode === right.gradeMode &&
+    left.manualGrade === right.manualGrade &&
+    left.classMode === right.classMode &&
+    left.manualClass === right.manualClass &&
+    left.selectedCourse === right.selectedCourse
   );
 }
 
@@ -93,6 +108,7 @@ export function CourseFilterProvider({
   const [selectedClasses, setSelectedClassesState] = useState<string[]>([]);
   const [userCoursePreferences, setUserCoursePreferences] =
     useState<UserCoursePreferences>(initialUserCoursePreferences);
+  const previousInitialUserCoursePreferences = useRef(initialUserCoursePreferences);
   const [autoAppliedGrades, setAutoAppliedGrades] = useState<number[]>([]);
   const [autoAppliedClasses, setAutoAppliedClasses] = useState<string[]>([]);
   const {
@@ -173,6 +189,16 @@ export function CourseFilterProvider({
   );
 
   useEffect(() => {
+    if (
+      areUserCoursePreferencesEqual(
+        previousInitialUserCoursePreferences.current,
+        initialUserCoursePreferences
+      )
+    ) {
+      return;
+    }
+
+    previousInitialUserCoursePreferences.current = initialUserCoursePreferences;
     setUserCoursePreferences(initialUserCoursePreferences);
     setAutoAppliedGrades([]);
     setAutoAppliedClasses([]);
