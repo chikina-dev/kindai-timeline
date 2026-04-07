@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import {
+  getCourseFeatureLabel,
+  getCourseSlotDetail,
+  TIMETABLE_CELL_CATEGORY_CLASS_BY_CATEGORY,
+} from "@/lib/timetable-presentation";
 import type { Course } from "@/types/course-records";
 import type { DayOfWeek } from "@/types/course-domain";
 import { cn } from "@/lib/utils";
@@ -15,32 +20,10 @@ type TimetableCellProps = {
   availableCourseCount: number;
 };
 
-const categoryColors: Record<string, string> = {
-  共通教養: "bg-[oklch(0.7_0.15_200/0.15)] border-l-[oklch(0.7_0.15_200)] hover:bg-[oklch(0.7_0.15_200/0.25)]",
-  外国語: "bg-[oklch(0.75_0.12_60/0.15)] border-l-[oklch(0.75_0.12_60)] hover:bg-[oklch(0.75_0.12_60/0.25)]",
-  専門: "bg-[oklch(0.65_0.18_145/0.15)] border-l-[oklch(0.65_0.18_145)] hover:bg-[oklch(0.65_0.18_145/0.25)]",
-};
-
-function getFeatureLabel(feature: Course["features"] | undefined) {
-  if (!feature) {
-    return null;
-  }
-
-  if (feature === "KICSオンデマンド") {
-    return "KICS";
-  }
-
-  if (feature === "メディア授業") {
-    return "メディア";
-  }
-
-  return "専門OD";
-}
-
 export function TimetableCell({ day, period, course, availableCourseCount }: TimetableCellProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const slotDetail = [course?.className, course?.classroom].filter(Boolean).join(" / ");
-  const featureLabel = getFeatureLabel(course?.features);
+  const slotDetail = course ? getCourseSlotDetail(course) : "";
+  const featureLabel = getCourseFeatureLabel(course?.features);
 
   if (!course) {
     return (
@@ -71,7 +54,7 @@ export function TimetableCell({ day, period, course, availableCourseCount }: Tim
           onClick={() => setIsDialogOpen(true)}
           className={cn(
             "flex h-full w-full flex-col overflow-hidden border-r border-l-4 border-border p-1.5 text-left transition-colors sm:p-2",
-            categoryColors[course.category]
+            TIMETABLE_CELL_CATEGORY_CLASS_BY_CATEGORY[course.category]
           )}
         >
           <div className="flex h-full min-h-0 flex-col overflow-hidden">

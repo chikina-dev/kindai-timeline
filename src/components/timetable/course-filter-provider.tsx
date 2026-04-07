@@ -11,9 +11,17 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { mutate as globalMutate } from "swr";
+import {
+  areNumberArraysEqual,
+  areStringArraysEqual,
+} from "@/lib/course-filter-state";
 import { getCourseCountForSlot } from "@/lib/course-availability";
 import { toSemesterQueryValue } from "@/lib/academic-term";
 import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
+import {
+  getTimetableTotalCredits,
+} from "@/lib/timetable-presentation";
+import { findCourseByPosition } from "@/lib/timetable";
 import {
   TIMETABLE_ENDPOINT,
   TIMETABLE_PAGE_DATA_ENDPOINT,
@@ -29,20 +37,6 @@ import { useTimetableSnapshot } from "@/hooks/use-timetable";
 import type { Course } from "@/types/course-records";
 import type { DayOfWeek, Semester } from "@/types/course-domain";
 import type { CourseAvailabilityCounts, TimetableSnapshot } from "@/types/timetable-query";
-
-function areNumberArraysEqual(left: number[], right: number[]) {
-  return (
-    left.length === right.length &&
-    left.every((value, index) => value === right[index])
-  );
-}
-
-function areStringArraysEqual(left: string[], right: string[]) {
-  return (
-    left.length === right.length &&
-    left.every((value, index) => value === right[index])
-  );
-}
 
 type SharedCourseFilterContextValue = {
   selectedAcademicYear: number;
@@ -224,15 +218,12 @@ export function CourseFilterProvider({
   );
 
   const getCourseByPosition = useCallback(
-    (day: DayOfWeek, period: number) =>
-      timetable.find(
-        (course) => course.day === day && course.periods?.includes(period)
-      ),
+    (day: DayOfWeek, period: number) => findCourseByPosition(timetable, day, period),
     [timetable]
   );
 
   const totalCredits = useMemo(
-    () => timetable.reduce((sum, course) => sum + course.credits, 0),
+    () => getTimetableTotalCredits(timetable),
     [timetable]
   );
 

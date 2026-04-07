@@ -5,11 +5,13 @@ import { CalendarRange, Download } from "lucide-react";
 import { useAcademicCalendarSessions } from "@/hooks/use-timetable";
 import {
   createTimetableIcs,
+  DEFAULT_ICS_TEMPLATE,
+  getIcsPreviewText,
   getRangeLabel,
   ICS_TEMPLATE_VARIABLES,
-  renderIcsTemplate,
   type IcsRangePreset,
 } from "@/lib/ics";
+import { getScheduledTimetableStats } from "@/lib/timetable-presentation";
 import type { Course } from "@/types/course-records";
 import type { Semester } from "@/types/course-domain";
 import { Button } from "@/components/ui/button";
@@ -32,8 +34,6 @@ import {
 } from "@/components/ui/select";
 import { IcsTemplateEditor } from "./ics-template-editor";
 
-const DEFAULT_TEMPLATE = "{{ title }}";
-
 type IcsDownloadDialogProps = {
   academicYear: number;
   open: boolean;
@@ -50,14 +50,11 @@ export function IcsDownloadDialog({
   timetable,
 }: IcsDownloadDialogProps) {
   const [rangePreset, setRangePreset] = useState<IcsRangePreset>("semester");
-  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [template, setTemplate] = useState(DEFAULT_ICS_TEMPLATE);
   const [calendarName, setCalendarName] = useState("近大時間割");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const scheduledCount = timetable.filter(
-    (course) => course.day && course.periods?.length
-  ).length;
-  const unscheduledCount = timetable.length - scheduledCount;
+  const { scheduledCount, unscheduledCount } = getScheduledTimetableStats(timetable);
   const firstCourse = timetable[0];
   const {
     data: academicCalendarSessions = [],
@@ -72,9 +69,7 @@ export function IcsDownloadDialog({
       enabled: open && scheduledCount > 0,
     }
   );
-  const previewText = firstCourse
-    ? renderIcsTemplate(template || DEFAULT_TEMPLATE, firstCourse)
-    : "";
+  const previewText = getIcsPreviewText(template, firstCourse);
 
   const handleDownload = () => {
     const trimmedTemplate = template.trim();
@@ -167,7 +162,7 @@ export function IcsDownloadDialog({
               <IcsTemplateEditor
                 value={template}
                 onChange={setTemplate}
-                placeholder="{{ title }}"
+                placeholder={DEFAULT_ICS_TEMPLATE}
                 variables={ICS_TEMPLATE_VARIABLES}
               />
               <p className="text-xs text-muted-foreground">

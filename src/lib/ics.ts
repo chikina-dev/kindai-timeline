@@ -51,6 +51,8 @@ export const ICS_TEMPLATE_VARIABLES: IcsTemplateVariable[] = [
   "note",
 ];
 
+export const DEFAULT_ICS_TEMPLATE = "{{ title }}";
+
 type DateRange = {
   end: Date;
   start: Date;
@@ -134,6 +136,18 @@ export function renderIcsTemplate(template: string, course: Course): string {
   return template.replace(/{{\s*([a-zA-Z]+)\s*}}/g, (placeholder, key) => {
     return key in variables ? variables[key as keyof typeof variables] : placeholder;
   });
+}
+
+export function getIcsPreviewText(
+  template: string,
+  course: Course | undefined,
+  fallbackTemplate = DEFAULT_ICS_TEMPLATE
+) {
+  if (!course) {
+    return "";
+  }
+
+  return renderIcsTemplate(template || fallbackTemplate, course);
 }
 
 function buildEventsForCourse(

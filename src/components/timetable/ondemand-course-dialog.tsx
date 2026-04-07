@@ -28,6 +28,11 @@ import {
   getCourseGradeOptions,
   groupCoursesByName,
 } from "@/lib/course-filters";
+import {
+  getCourseFeatureLabel,
+  isCourseInTimetable,
+  TIMETABLE_CATEGORY_BADGE_CLASS_BY_CATEGORY,
+} from "@/lib/timetable-presentation";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import { CourseRequirementBadge } from "./course-requirement-badge";
@@ -36,12 +41,6 @@ import { CourseSyllabusLink } from "./course-syllabus-link";
 type OndemandCourseDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-};
-
-const categoryColors: Record<string, string> = {
-  共通教養: "bg-[oklch(0.7_0.15_200)] text-[oklch(0.15_0_0)]",
-  外国語: "bg-[oklch(0.75_0.12_60)] text-[oklch(0.15_0_0)]",
-  専門: "bg-[oklch(0.65_0.18_145)] text-[oklch(0.15_0_0)]",
 };
 
 export function OndemandCourseDialog({
@@ -83,10 +82,6 @@ export function OndemandCourseDialog({
   const courseGroups = groupCoursesByName(filteredCourses);
   const gradeOptions = getCourseGradeOptions(courses);
   const classOptions = getCourseClassOptions(selectedClasses);
-
-  const isInTimetable = (courseId: string) => {
-    return timetable.some((c) => c.id === courseId);
-  };
 
   const handleSelect = async (course: Course) => {
     setIsSubmitting(true);
@@ -165,7 +160,7 @@ export function OndemandCourseDialog({
 
                 if (!hasMultipleVariants) {
                   const course = group.variants[0];
-                  const alreadySelected = isInTimetable(course.id);
+                  const alreadySelected = isCourseInTimetable(timetable, course.id);
 
                   return (
                     <div key={course.id} className="relative">
@@ -188,17 +183,13 @@ export function OndemandCourseDialog({
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge className={cn("text-xs", categoryColors[course.category])}>
+                              <Badge className={cn("text-xs", TIMETABLE_CATEGORY_BADGE_CLASS_BY_CATEGORY[course.category])}>
                                 {course.category}
                               </Badge>
                               <CourseRequirementBadge requirementType={course.requirementType} />
-                              {course.features && (
+                              {getCourseFeatureLabel(course.features) && (
                                 <Badge variant="outline" className="text-xs">
-                                  {course.features === "KICSオンデマンド"
-                                    ? "KICS"
-                                    : course.features === "メディア授業"
-                                    ? "メディア"
-                                    : "専門OD"}
+                                  {getCourseFeatureLabel(course.features)}
                                 </Badge>
                               )}
                             </div>
@@ -256,17 +247,13 @@ export function OndemandCourseDialog({
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge className={cn("text-xs", categoryColors[group.category])}>
+                          <Badge className={cn("text-xs", TIMETABLE_CATEGORY_BADGE_CLASS_BY_CATEGORY[group.category])}>
                             {group.category}
                           </Badge>
                           <CourseRequirementBadge requirementType={group.requirementType} />
-                          {group.features && (
+                          {getCourseFeatureLabel(group.features) && (
                             <Badge variant="outline" className="text-xs">
-                              {group.features === "KICSオンデマンド"
-                                ? "KICS"
-                                : group.features === "メディア授業"
-                                ? "メディア"
-                                : "専門OD"}
+                              {getCourseFeatureLabel(group.features)}
                             </Badge>
                           )}
                           <span className="text-xs text-muted-foreground">
@@ -300,7 +287,7 @@ export function OndemandCourseDialog({
                     {isExpanded && (
                       <div className="px-4 pb-3 space-y-1.5 border-t border-border pt-3">
                         {group.variants.map((course) => {
-                          const alreadySelected = isInTimetable(course.id);
+                          const alreadySelected = isCourseInTimetable(timetable, course.id);
 
                           return (
                             <div key={course.id} className="relative">

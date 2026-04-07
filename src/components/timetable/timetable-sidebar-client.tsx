@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
+import { TIMETABLE_CATEGORY_STRIP_CLASS_BY_CATEGORY } from "@/lib/timetable-presentation";
 import { sortTimetableCourses } from "@/lib/timetable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +14,6 @@ import { OndemandCourseDialog } from "./ondemand-course-dialog";
 import { IcsDownloadDialog } from "./ics-download-dialog";
 import { CourseRequirementBadge } from "./course-requirement-badge";
 import { CourseSyllabusLink } from "./course-syllabus-link";
-
-
-const categoryColors: Record<string, string> = {
-  共通教養: "bg-[oklch(0.7_0.15_200)]",
-  外国語: "bg-[oklch(0.75_0.12_60)]",
-  専門: "bg-[oklch(0.65_0.18_145)]",
-};
 
 export function TimetableSidebarClient() {
   const [ondemandOpen, setOndemandOpen] = useState(false);
@@ -76,7 +70,7 @@ export function TimetableSidebarClient() {
                     <div
                       className={cn(
                         "h-full min-h-10 w-1 shrink-0 rounded-full",
-                        categoryColors[course.category]
+                        TIMETABLE_CATEGORY_STRIP_CLASS_BY_CATEGORY[course.category]
                       )}
                     />
                     <div className="relative min-w-0 flex-1 pr-8">

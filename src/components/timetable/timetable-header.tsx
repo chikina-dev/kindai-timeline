@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSharedCourseFilters } from "@/components/timetable/course-filter-provider";
 import { ProfileMenu } from "@/components/timetable/profile-menu";
+import { countCoursesByCategory } from "@/lib/timetable-presentation";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -35,13 +36,7 @@ export function TimetableHeader({ session }: TimetableHeaderProps) {
     setHasMounted(true);
   }, []);
 
-  const categoryCounts = timetable.reduce(
-    (acc, course) => {
-      acc[course.category] = (acc[course.category] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const categoryCounts = countCoursesByCategory(timetable);
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
