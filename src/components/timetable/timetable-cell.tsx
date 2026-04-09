@@ -24,17 +24,22 @@ export function TimetableCell({ day, period, course, availableCourseCount }: Tim
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const slotDetail = course ? getCourseSlotDetail(course) : "";
   const featureLabel = getCourseFeatureLabel(course?.features);
+  const canAddCourse = availableCourseCount > 0;
 
   if (!course) {
     return (
       <>
         <div className="relative h-18 sm:h-25">
-          <button
-            onClick={() => setIsDialogOpen(true)}
-            className="group flex h-full w-full items-center justify-center border-r border-border transition-colors hover:bg-secondary/50"
-          >
-            <Plus className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 sm:h-5 sm:w-5" />
-          </button>
+          {canAddCourse ? (
+            <button
+              onClick={() => setIsDialogOpen(true)}
+              className="group flex h-full w-full items-center justify-center border-r border-border transition-colors hover:bg-secondary/50"
+            >
+              <Plus className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 sm:h-5 sm:w-5" />
+            </button>
+          ) : (
+            <div className="h-full w-full border-r border-border" />
+          )}
         </div>
         <CourseSelectDialog
           open={isDialogOpen}
