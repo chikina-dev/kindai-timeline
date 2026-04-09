@@ -38,6 +38,14 @@ Parse a PDF directly with the existing local parser:
 npm run courses:parse -- --file data/pdf/【前期】R8情報学部時間割.pdf --out data/courses-2026-前期.json
 ```
 
+Parse a PDF with OpenDataLoader's table extraction:
+
+```bash
+npm run courses:parse:odl -- --file data/pdf/【前期】R8情報学部時間割.pdf --out data/courses-2026-前期-odl.json
+```
+
+`@opendataloader/pdf` requires Java 11+ on your `PATH`.
+
 Parse a PDF via Google Drive API by converting it to Google Docs, exporting the document as HTML, and extracting `<table>` data from the exported file:
 
 ```bash
@@ -85,6 +93,14 @@ GOOGLE_DRIVE_FOLDER_ID=your-folder-id
 ```
 
 The Google Docs parser writes local artifacts under `data/google-doc-artifacts/`, including the exported HTML bundle, a Markdown snapshot, and `raw-tables.json` for inspection. If `--file` points to a local ZIP, the parser skips Google API access and reuses that bundle directly. If Google reports a quota error while using a service account, switch to `npm run courses:auth:gdocs` so the upload runs against your user account instead.
+
+Apply course changes to the database from a JSON diff instead of deleting the whole semester upfront:
+
+```bash
+npm run courses:import:diff -- --previous data/courses-2026-後期-gdocs.json --next data/courses-2026-後期-odl.json --year 2026 --semester 後期 --dry-run
+```
+
+Remove `--dry-run` to execute the updates. The script reads the current DB rows for the specified year and semester, matches them against the `--previous` JSON, then applies only the required `update / insert / delete` operations.
 
 ## Deploy
 
