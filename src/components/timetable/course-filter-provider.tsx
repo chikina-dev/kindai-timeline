@@ -23,6 +23,7 @@ import {
 } from "@/lib/timetable-presentation";
 import { findCourseByPosition } from "@/lib/timetable";
 import {
+  buildTimetableApiUrl,
   TIMETABLE_ENDPOINT,
   TIMETABLE_PAGE_DATA_ENDPOINT,
   buildTimetablePageDataApiUrl,
@@ -111,6 +112,10 @@ export function CourseFilterProvider({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   });
+  const timetableUrl = buildTimetableApiUrl(TIMETABLE_ENDPOINT, {
+    academicYear: selectedAcademicYear,
+    semester: selectedSemester,
+  });
   const userCoursePreferences =
     timetableSnapshot?.userCoursePreferences ??
     createDefaultUserCoursePreferences();
@@ -139,6 +144,35 @@ export function CourseFilterProvider({
     );
   }, [snapshotUrl]);
 
+  const syncCurrentTimetableCaches = useCallback(
+    async (
+      updater: (current: TimetableSnapshot | undefined) => TimetableSnapshot | undefined
+    ) => {
+      let nextTimetable: Course[] | undefined;
+
+      await mutateTimetableSnapshot(
+        (current) => {
+          const nextSnapshot = updater(current);
+          nextTimetable = nextSnapshot?.timetable;
+          return nextSnapshot;
+        },
+        { revalidate: false }
+      );
+
+      if (nextTimetable) {
+        await globalMutate(timetableUrl, nextTimetable, { revalidate: false });
+      }
+    },
+    [mutateTimetableSnapshot, timetableUrl]
+  );
+
+  const revalidateCurrentTimetableCaches = useCallback(async () => {
+    await Promise.all([
+      globalMutate(snapshotUrl),
+      globalMutate(timetableUrl),
+    ]);
+  }, [snapshotUrl, timetableUrl]);
+
   const addCourse = useCallback(
     async (course: Course) => {
       try {
@@ -152,7 +186,7 @@ export function CourseFilterProvider({
           throw new Error("Failed to add course");
         }
 
-        await mutateTimetableSnapshot(
+        await syncCurrentTimetableCaches(
           (current) => {
             if (!current) {
               return current;
@@ -167,17 +201,23 @@ export function CourseFilterProvider({
               timetable: [...current.timetable, course],
             } satisfies TimetableSnapshot;
           },
-          { revalidate: false }
         );
 
-        await revalidateOtherSnapshotCaches();
+        await Promise.all([
+          revalidateCurrentTimetableCaches(),
+          revalidateOtherSnapshotCaches(),
+        ]);
         return true;
       } catch (error) {
         console.error("Error adding course:", error);
         return false;
       }
     },
-    [mutateTimetableSnapshot, revalidateOtherSnapshotCaches]
+    [
+      revalidateCurrentTimetableCaches,
+      revalidateOtherSnapshotCaches,
+      syncCurrentTimetableCaches,
+    ]
   );
 
   const removeCourse = useCallback(
@@ -193,7 +233,7 @@ export function CourseFilterProvider({
           throw new Error("Failed to remove course");
         }
 
-        await mutateTimetableSnapshot(
+        await syncCurrentTimetableCaches(
           (current) => {
             if (!current) {
               return current;
@@ -204,17 +244,23 @@ export function CourseFilterProvider({
               timetable: current.timetable.filter((course) => course.id !== courseId),
             } satisfies TimetableSnapshot;
           },
-          { revalidate: false }
         );
 
-        await revalidateOtherSnapshotCaches();
+        await Promise.all([
+          revalidateCurrentTimetableCaches(),
+          revalidateOtherSnapshotCaches(),
+        ]);
         return true;
       } catch (error) {
         console.error("Error removing course:", error);
         return false;
       }
     },
-    [mutateTimetableSnapshot, revalidateOtherSnapshotCaches]
+    [
+      revalidateCurrentTimetableCaches,
+      revalidateOtherSnapshotCaches,
+      syncCurrentTimetableCaches,
+    ]
   );
 
   const getCourseByPosition = useCallback(
@@ -258,7 +304,7 @@ export function CourseFilterProvider({
         }
 
         const nextPreferences = (await response.json()) as UserCoursePreferences;
-        await mutateTimetableSnapshot(
+        await syncCurrentTimetableCaches(
           (current) => {
             if (!current) {
               return current;
@@ -269,9 +315,11 @@ export function CourseFilterProvider({
               userCoursePreferences: nextPreferences,
             } satisfies TimetableSnapshot;
           },
-          { revalidate: false }
         );
-        await revalidateOtherSnapshotCaches();
+        await Promise.all([
+          revalidateCurrentTimetableCaches(),
+          revalidateOtherSnapshotCaches(),
+        ]);
 
         if (options?.applyToFilters) {
           const nextProfile = resolveUserCourseProfile(
@@ -292,7 +340,12 @@ export function CourseFilterProvider({
 
       return savePreferences();
     },
-    [mutateTimetableSnapshot, revalidateOtherSnapshotCaches, selectedAcademicYear]
+    [
+      revalidateCurrentTimetableCaches,
+      revalidateOtherSnapshotCaches,
+      selectedAcademicYear,
+      syncCurrentTimetableCaches,
+    ]
   );
 
   const getAvailableCourseCount = useCallback(
