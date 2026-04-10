@@ -96,11 +96,9 @@ export function CourseSelectDialog({
 
   const handleSelect = async (course: Course) => {
     setIsSubmitting(true);
-    // If there's already a course in this slot, remove it first
-    if (selectedCourse) {
-      await removeCourse(selectedCourse.id);
-    }
-    const success = await addCourse(course);
+    const success = await addCourse(course, {
+      replaceCourseId: selectedCourse?.id,
+    });
     setIsSubmitting(false);
     if (success) {
       onOpenChange(false);

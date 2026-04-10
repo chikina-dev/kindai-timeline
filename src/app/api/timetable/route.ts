@@ -5,6 +5,27 @@ import { db } from "@/lib/db";
 import { userCourses } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getUserTimetable } from "@/server/timetable";
+import type { Semester } from "@/types/course-domain";
+
+type TimetableMutationBody = {
+  courseId: string;
+  replaceCourseId?: string;
+  academicYear?: number;
+  semester?: string;
+};
+
+function resolveMutationFilters(body: TimetableMutationBody): {
+  academicYear?: number;
+  semester?: Semester;
+} {
+  return {
+    academicYear:
+      typeof body.academicYear === "number" && Number.isInteger(body.academicYear)
+        ? body.academicYear
+        : undefined,
+    semester: fromSemesterQueryValue(body.semester),
+  };
+}
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -39,13 +60,27 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { courseId } = (await request.json()) as { courseId: string };
+    const body = (await request.json()) as TimetableMutationBody;
+    const { courseId, replaceCourseId } = body;
 
     if (!courseId || typeof courseId !== "string") {
       return NextResponse.json(
         { error: "Course ID required" },
         { status: 400 }
       );
+    }
+
+    const filters = resolveMutationFilters(body);
+
+    if (replaceCourseId && replaceCourseId !== courseId) {
+      await db
+        .delete(userCourses)
+        .where(
+          and(
+            eq(userCourses.userId, session.user.id),
+            eq(userCourses.courseId, replaceCourseId)
+          )
+        );
     }
 
     await db
@@ -56,7 +91,9 @@ export async function POST(request: Request) {
       })
       .onConflictDoNothing();
 
-    return NextResponse.json({ success: true });
+    const timetable = await getUserTimetable(session.user.id, filters);
+
+    return NextResponse.json({ success: true, timetable });
   } catch (error) {
     console.error("Error adding to timetable:", error);
     return NextResponse.json(
@@ -73,7 +110,8 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const { courseId } = (await request.json()) as { courseId: string };
+    const body = (await request.json()) as TimetableMutationBody;
+    const { courseId } = body;
 
     if (!courseId || typeof courseId !== "string") {
       return NextResponse.json(
@@ -81,6 +119,8 @@ export async function DELETE(request: Request) {
         { status: 400 }
       );
     }
+
+    const filters = resolveMutationFilters(body);
 
     await db
       .delete(userCourses)
@@ -91,7 +131,9 @@ export async function DELETE(request: Request) {
         )
       );
 
-    return NextResponse.json({ success: true });
+    const timetable = await getUserTimetable(session.user.id, filters);
+
+    return NextResponse.json({ success: true, timetable });
   } catch (error) {
     console.error("Error removing from timetable:", error);
     return NextResponse.json(

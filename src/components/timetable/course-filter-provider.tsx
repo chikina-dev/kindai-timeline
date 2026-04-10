@@ -21,12 +21,10 @@ import { normalizeSelectedCourseClasses } from "@/lib/course-filters";
 import {
   getTimetableTotalCredits,
 } from "@/lib/timetable-presentation";
-import { findCourseByPosition } from "@/lib/timetable";
+import { findCourseByPosition, sortTimetableCourses } from "@/lib/timetable";
 import {
   buildTimetableApiUrl,
   TIMETABLE_ENDPOINT,
-  TIMETABLE_PAGE_DATA_ENDPOINT,
-  buildTimetablePageDataApiUrl,
 } from "@/lib/timetable-api";
 import {
   createDefaultUserCoursePreferences,
@@ -38,6 +36,11 @@ import { useTimetableSnapshot } from "@/hooks/use-timetable";
 import type { Course } from "@/types/course-records";
 import type { DayOfWeek, Semester } from "@/types/course-domain";
 import type { CourseAvailabilityCounts, TimetableSnapshot } from "@/types/timetable-query";
+
+type TimetableMutationResponse = {
+  success: boolean;
+  timetable: Course[];
+};
 
 type SharedCourseFilterContextValue = {
   selectedAcademicYear: number;
@@ -54,7 +57,10 @@ type SharedCourseFilterContextValue = {
   warningMessage?: string;
   timetable: Course[];
   isTimetableLoading: boolean;
-  addCourse: (course: Course) => Promise<boolean>;
+  addCourse: (
+    course: Course,
+    options?: { replaceCourseId?: string }
+  ) => Promise<boolean>;
   removeCourse: (courseId: string) => Promise<boolean>;
   getCourseByPosition: (day: DayOfWeek, period: number) => Course | undefined;
   totalCredits: number;
@@ -108,10 +114,6 @@ export function CourseFilterProvider({
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
   });
-  const snapshotUrl = buildTimetablePageDataApiUrl(TIMETABLE_PAGE_DATA_ENDPOINT, {
-    academicYear: selectedAcademicYear,
-    semester: selectedSemester,
-  });
   const timetableUrl = buildTimetableApiUrl(TIMETABLE_ENDPOINT, {
     academicYear: selectedAcademicYear,
     semester: selectedSemester,
@@ -120,104 +122,77 @@ export function CourseFilterProvider({
     timetableSnapshot?.userCoursePreferences ??
     createDefaultUserCoursePreferences();
   const courseAvailabilityCounts = timetableSnapshot?.courseAvailabilityCounts;
-  const timetable = useMemo(
-    () => timetableSnapshot?.timetable ?? [],
-    [timetableSnapshot?.timetable]
+  const [timetable, setTimetable] = useState<Course[]>(
+    timetableSnapshot?.timetable ?? []
   );
 
   const setSelectedClasses = useCallback((values: string[]) => {
     setSelectedClassesState(normalizeSelectedCourseClasses(values));
   }, []);
+
+  useEffect(() => {
+    setTimetable(timetableSnapshot?.timetable ?? []);
+  }, [timetableSnapshot?.timetable]);
+
   const resolvedUserCourseProfile = useMemo(
     () => resolveUserCourseProfile(userCoursePreferences, selectedAcademicYear),
     [selectedAcademicYear, userCoursePreferences]
   );
 
-  const revalidateOtherSnapshotCaches = useCallback(async () => {
-    await globalMutate(
-      (key) =>
-        typeof key === "string" &&
-        key.startsWith(TIMETABLE_PAGE_DATA_ENDPOINT) &&
-        key !== snapshotUrl,
-      undefined,
-      { revalidate: true }
-    );
-  }, [snapshotUrl]);
-
   const syncCurrentTimetableCaches = useCallback(
-    async (
-      updater: (current: TimetableSnapshot | undefined) => TimetableSnapshot | undefined
-    ) => {
-      let nextTimetable: Course[] | undefined;
+    async (nextTimetable: Course[]) => {
+      const sortedTimetable = sortTimetableCourses(nextTimetable);
+
+      setTimetable(sortedTimetable);
 
       await mutateTimetableSnapshot(
         (current) => {
-          const nextSnapshot = updater(current);
-          nextTimetable = nextSnapshot?.timetable;
-          return nextSnapshot;
+          if (!current) {
+            return current;
+          }
+
+          return {
+            ...current,
+            timetable: sortedTimetable,
+          } satisfies TimetableSnapshot;
         },
         { revalidate: false }
       );
 
-      if (nextTimetable) {
-        await globalMutate(timetableUrl, nextTimetable, { revalidate: false });
-      }
+      await globalMutate(timetableUrl, sortedTimetable, { revalidate: false });
     },
     [mutateTimetableSnapshot, timetableUrl]
   );
 
-  const revalidateCurrentTimetableCaches = useCallback(async () => {
-    await Promise.all([
-      globalMutate(snapshotUrl),
-      globalMutate(timetableUrl),
-    ]);
-  }, [snapshotUrl, timetableUrl]);
-
   const addCourse = useCallback(
-    async (course: Course) => {
+    async (course: Course, options?: { replaceCourseId?: string }) => {
       try {
         const response = await fetch(TIMETABLE_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseId: course.id }),
+          body: JSON.stringify({
+            courseId: course.id,
+            replaceCourseId: options?.replaceCourseId,
+            academicYear: selectedAcademicYear,
+            semester: selectedSemester,
+          }),
         });
 
         if (!response.ok) {
           throw new Error("Failed to add course");
         }
 
-        await syncCurrentTimetableCaches(
-          (current) => {
-            if (!current) {
-              return current;
-            }
+        const result = (await response.json()) as TimetableMutationResponse;
 
-            if (current.timetable.some((item) => item.id === course.id)) {
-              return current;
-            }
+        await syncCurrentTimetableCaches(result.timetable);
 
-            return {
-              ...current,
-              timetable: [...current.timetable, course],
-            } satisfies TimetableSnapshot;
-          },
-        );
-
-        await Promise.all([
-          revalidateCurrentTimetableCaches(),
-          revalidateOtherSnapshotCaches(),
-        ]);
         return true;
       } catch (error) {
         console.error("Error adding course:", error);
         return false;
       }
     },
-    [
-      revalidateCurrentTimetableCaches,
-      revalidateOtherSnapshotCaches,
-      syncCurrentTimetableCaches,
-    ]
+    [selectedAcademicYear, selectedSemester, syncCurrentTimetableCaches]
   );
 
   const removeCourse = useCallback(
@@ -226,41 +201,28 @@ export function CourseFilterProvider({
         const response = await fetch(TIMETABLE_ENDPOINT, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseId }),
+          body: JSON.stringify({
+            courseId,
+            academicYear: selectedAcademicYear,
+            semester: selectedSemester,
+          }),
         });
 
         if (!response.ok) {
           throw new Error("Failed to remove course");
         }
 
-        await syncCurrentTimetableCaches(
-          (current) => {
-            if (!current) {
-              return current;
-            }
+        const result = (await response.json()) as TimetableMutationResponse;
 
-            return {
-              ...current,
-              timetable: current.timetable.filter((course) => course.id !== courseId),
-            } satisfies TimetableSnapshot;
-          },
-        );
+        await syncCurrentTimetableCaches(result.timetable);
 
-        await Promise.all([
-          revalidateCurrentTimetableCaches(),
-          revalidateOtherSnapshotCaches(),
-        ]);
         return true;
       } catch (error) {
         console.error("Error removing course:", error);
         return false;
       }
     },
-    [
-      revalidateCurrentTimetableCaches,
-      revalidateOtherSnapshotCaches,
-      syncCurrentTimetableCaches,
-    ]
+    [selectedAcademicYear, selectedSemester, syncCurrentTimetableCaches]
   );
 
   const getCourseByPosition = useCallback(
@@ -304,7 +266,7 @@ export function CourseFilterProvider({
         }
 
         const nextPreferences = (await response.json()) as UserCoursePreferences;
-        await syncCurrentTimetableCaches(
+        await mutateTimetableSnapshot(
           (current) => {
             if (!current) {
               return current;
@@ -315,11 +277,8 @@ export function CourseFilterProvider({
               userCoursePreferences: nextPreferences,
             } satisfies TimetableSnapshot;
           },
+          { revalidate: false }
         );
-        await Promise.all([
-          revalidateCurrentTimetableCaches(),
-          revalidateOtherSnapshotCaches(),
-        ]);
 
         if (options?.applyToFilters) {
           const nextProfile = resolveUserCourseProfile(
@@ -340,12 +299,7 @@ export function CourseFilterProvider({
 
       return savePreferences();
     },
-    [
-      revalidateCurrentTimetableCaches,
-      revalidateOtherSnapshotCaches,
-      selectedAcademicYear,
-      syncCurrentTimetableCaches,
-    ]
+    [mutateTimetableSnapshot, selectedAcademicYear]
   );
 
   const getAvailableCourseCount = useCallback(

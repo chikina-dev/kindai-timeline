@@ -84,7 +84,9 @@ export function useCourses(
   const url = buildCoursesUrl("/api/courses", filters);
   const key = options?.enabled === false ? null : url;
 
-  return useSWR<Course[]>(key, fetcher);
+  return useSWR<Course[]>(key, fetcher, {
+    revalidateIfStale: false,
+  });
 }
 
 export function useCourseAvailabilityCounts(
