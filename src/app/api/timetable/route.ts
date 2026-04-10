@@ -23,7 +23,7 @@ function resolveMutationFilters(body: TimetableMutationBody): {
       typeof body.academicYear === "number" && Number.isInteger(body.academicYear)
         ? body.academicYear
         : undefined,
-    semester: fromSemesterQueryValue(body.semester),
+    semester: fromSemesterQueryValue(body.semester) ?? undefined,
   };
 }
 
