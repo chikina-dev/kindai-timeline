@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { OndemandCourseDialog } from "./ondemand-course-dialog";
 import { IcsDownloadDialog } from "./ics-download-dialog";
 import { CourseRequirementBadge } from "./course-requirement-badge";
+import { CourseLegacyNameList } from "./course-legacy-name-list";
 import { CourseSyllabusLink } from "./course-syllabus-link";
 
 export function TimetableSidebarClient() {
@@ -91,6 +92,7 @@ export function TimetableSidebarClient() {
                       <h4 className="min-w-0 line-clamp-2 text-xs font-medium text-foreground sm:text-sm">
                         {course.name}
                       </h4>
+                      <CourseLegacyNameList course={course} compact />
                       {course.instructors && (
                         <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground sm:text-xs">
                           <User className="h-3 w-3" />

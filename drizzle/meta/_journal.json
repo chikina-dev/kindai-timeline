@@ -36,6 +36,13 @@
       "when": 1775534823229,
       "tag": "0004_glorious_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775811600000,
+      "tag": "0005_course_legacy_names",
+      "breakpoints": true
     }
   ]
 }

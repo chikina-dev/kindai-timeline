@@ -35,6 +35,7 @@ import {
 } from "@/lib/timetable-presentation";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
+import { CourseLegacyNameList } from "./course-legacy-name-list";
 import { CourseRequirementBadge } from "./course-requirement-badge";
 import { CourseSyllabusLink } from "./course-syllabus-link";
 
@@ -196,6 +197,7 @@ export function OndemandCourseDialog({
                             <h3 className="font-semibold text-foreground mb-2">
                               {course.name}
                             </h3>
+                            <CourseLegacyNameList course={course} compact />
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
                               {course.instructors && (
                                 <div className="flex items-center gap-1">
@@ -263,6 +265,7 @@ export function OndemandCourseDialog({
                         <h3 className="font-semibold text-foreground mb-1">
                           {group.name}
                         </h3>
+                        <CourseLegacyNameList course={group.variants[0]} compact />
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <BookOpen className="w-3 h-3" />

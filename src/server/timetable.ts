@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { courses, userCourses } from "@/lib/db/schema";
+import { attachLegacyNamesToCourses } from "@/server/courses";
 import type { Course } from "@/types/course-records";
 import type { TimetableQueryFilters } from "@/types/timetable-query";
 
@@ -46,5 +47,5 @@ export async function getUserTimetable(
     .where(and(...conditions))
     .orderBy(courses.day, courses.name);
 
-  return result satisfies Course[];
+  return attachLegacyNamesToCourses(result) satisfies Promise<Course[]>;
 }

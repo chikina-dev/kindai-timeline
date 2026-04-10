@@ -102,6 +102,24 @@ export const courses = pgTable("course", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
 });
 
+export const courseLegacyNames = pgTable(
+  "course_legacy_name",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    legacyAcademicYear: integer("legacy_academic_year").notNull(),
+    legacyName: text("legacy_name").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  },
+  (table) => ({
+    uniqueCourseLegacyName: uniqueIndex(
+      "course_legacy_name_course_legacy_year_name_unique"
+    ).on(table.courseId, table.legacyAcademicYear, table.legacyName),
+  })
+);
+
 export const userCourses = pgTable(
   "user_course",
   {
@@ -162,6 +180,8 @@ export const academicCalendarSessions = pgTable(
 
 export type Course = typeof courses.$inferSelect;
 export type NewCourse = typeof courses.$inferInsert;
+export type CourseLegacyName = typeof courseLegacyNames.$inferSelect;
+export type NewCourseLegacyName = typeof courseLegacyNames.$inferInsert;
 export type AcademicCalendarSession = typeof academicCalendarSessions.$inferSelect;
 export type NewAcademicCalendarSession =
   typeof academicCalendarSessions.$inferInsert;
